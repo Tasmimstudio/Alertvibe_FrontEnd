@@ -1,38 +1,64 @@
-// pages/AlertHistory.jsx (View Full Alert Log)
+// pages/AlertHistory.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { alertApi } from '../services/api';
 
+const Logo = () => (
+  <div className="av-logo">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V6L12 2z" fill="white" fillOpacity="0.9"/>
+      <path d="M9 12l2 2 4-4" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  </div>
+);
+
+const HomeIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>
+);
+const BikeIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/>
+    <path d="M15 6h-3l-2 5.5M5.5 14L8 8.5h5.5L16 14"/>
+  </svg>
+);
+const BellIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+  </svg>
+);
+const LogoutIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+);
+
 const AlertHistory = () => {
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, userProfile, logout } = useAuth();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchAlerts();
-  }, []);
+  useEffect(() => { fetchAlerts(); }, []);
 
   const fetchAlerts = async () => {
     setLoading(true);
     try {
       const data = await alertApi.listAlerts();
       const formattedAlerts = (Array.isArray(data) ? data : []).map(alert => {
-        const timestamp = alert.timestamp?._seconds
+        const ts = alert.timestamp?._seconds
           ? new Date(alert.timestamp._seconds * 1000)
-          : alert.timestamp
-            ? new Date(alert.timestamp)
-            : new Date();
-
+          : alert.timestamp ? new Date(alert.timestamp) : new Date();
         return {
           id: alert.id,
-          date: timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase(),
-          time: timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+          date: ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase(),
+          time: ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
           motorcycle: alert.deviceId || 'Unknown',
           message: alert.message || 'VIBRATION DETECTED',
-          isRead: alert.responded || false
+          isRead: alert.responded || false,
         };
       });
       setAlerts(formattedAlerts);
@@ -44,158 +70,141 @@ const AlertHistory = () => {
   };
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
+    try { await logout(); navigate('/login'); }
+    catch (error) { console.error('Error logging out:', error); }
   };
 
   const toggleReadStatus = (alertId) => {
-    setAlerts(alerts.map(alert =>
-      alert.id === alertId
-        ? { ...alert, isRead: !alert.isRead }
-        : alert
-    ));
+    setAlerts(alerts.map(a => a.id === alertId ? { ...a, isRead: !a.isRead } : a));
   };
 
+  const filtered = alerts.filter(a =>
+    !searchQuery ||
+    a.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.motorcycle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.date.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const initials = userProfile?.displayName?.charAt(0)?.toUpperCase() || 'U';
+
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}>
+    <div className="av-bg av-grid-bg min-h-screen flex flex-col">
+
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-6 border-b border-gray-700">
-        {/* Logo and Title */}
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center shadow-xl">
-            <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: '#dc2626' }}>
-                A<span className="text-gray-700">/</span>V
-              </div>
-              <div className="text-[8px] font-semibold text-yellow-600 mt-0.5">
-                ALERT VIBE
-              </div>
-            </div>
-          </div>
+      <header className="flex items-center justify-between px-8 py-4"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(12px)' }}>
+        <div className="flex items-center gap-3">
+          <Logo />
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-wide">WELCOME TO ALERTVIBE</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-green-400 font-semibold text-sm">CONNECTED</span>
+            <h1 className="text-lg font-black tracking-widest text-white leading-tight">ALERTVIBE</h1>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-green-400 status-pulse" />
+              <span className="text-green-400 text-xs font-semibold tracking-wider">CONNECTED</span>
             </div>
           </div>
         </div>
-
-        {/* Search and User Profile */}
-        <div className="flex items-center gap-4">
-          <div className="relative">
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative hidden md:block">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ANNE MORALES"
-              className="px-6 py-2 rounded bg-white text-gray-800 font-semibold text-center"
-              style={{ width: '250px' }}
+              placeholder="Search alerts…"
+              className="av-input pl-9 py-2 text-sm"
+              style={{ width: 220 }}
             />
           </div>
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-xl overflow-hidden">
-            <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">
-                {currentUser?.displayName?.charAt(0) || 'U'}
-              </span>
-            </div>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+               style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
+            {initials}
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="flex">
+      <div className="flex flex-1">
+
         {/* Sidebar */}
-        <div className="w-64 p-6 space-y-4">
-          <button
-            onClick={() => navigate('/')}
-            className="w-full px-6 py-3 rounded-lg font-bold text-gray-800 bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 transition-all shadow-md"
-          >
-            HOME
-          </button>
-          <button
-            onClick={() => navigate('/devices')}
-            className="w-full px-6 py-3 rounded-lg font-bold text-gray-800 bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 transition-all shadow-md"
-          >
-            Manage Motorcycles
-          </button>
-          <button
-            onClick={() => navigate('/history')}
-            className="w-full px-6 py-3 rounded-lg font-bold text-gray-800 transition-all shadow-md"
-            style={{
-              background: 'linear-gradient(to right, #fbbf24, #f59e0b)',
-            }}
-          >
-            View Full Alert Log
-          </button>
-          <button
-            onClick={handleLogout}
-            className="w-full px-6 py-3 rounded-lg font-bold text-gray-800 bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 transition-all shadow-md"
-          >
-            Log out
-          </button>
-        </div>
+        <aside className="w-56 flex-shrink-0 p-5 flex flex-col gap-1"
+               style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+          <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-2 px-2">Navigation</p>
+          <button onClick={() => navigate('/')} className="sb-btn"><HomeIcon /> Home</button>
+          <button onClick={() => navigate('/devices')} className="sb-btn"><BikeIcon /> Manage Motorcycles</button>
+          <button onClick={() => navigate('/history')} className="sb-btn sb-active"><BellIcon /> Full Alert Log</button>
+          <div className="flex-1" />
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', margin: '8px 0' }} />
+          <button onClick={handleLogout} className="sb-btn sb-logout"><LogoutIcon /> Log Out</button>
+        </aside>
 
-        {/* Main Content */}
-        <div className="flex-1 p-6">
-          <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+        {/* Main */}
+        <main className="flex-1 p-6 min-w-0">
+          <div className="glass h-full overflow-hidden">
+            {/* Table header */}
+            <div className="flex items-center justify-between px-6 py-4"
+                 style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <h2 className="text-white font-bold text-lg">Alert Log</h2>
+              <span className="badge badge-red">{filtered.length} alerts</span>
+            </div>
+
             {loading ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-2 text-gray-600">Loading alerts...</p>
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="av-spinner" />
+                <p className="text-white/40 text-sm">Loading alerts…</p>
               </div>
-            ) : alerts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">No alerts found. Your motorcycle is safe!</p>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <span className="text-5xl">✅</span>
+                <p className="text-white/50 text-sm">
+                  {searchQuery ? 'No matching alerts.' : 'No alerts found. Your motorcycle is safe!'}
+                </p>
               </div>
             ) : (
-              /* Alert Table */
-              <table className="w-full">
-                <thead>
-                  <tr style={{ background: '#4ade80' }}>
-                    <th className="px-6 py-4 text-left font-bold text-white">DATE</th>
-                    <th className="px-6 py-4 text-left font-bold text-white">TIME</th>
-                    <th className="px-6 py-4 text-left font-bold text-white">MOTORCYCLE</th>
-                    <th className="px-6 py-4 text-left font-bold text-white">MESSAGE</th>
-                    <th className="px-6 py-4 text-left font-bold text-white">STATUS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {alerts.map((alert, index) => (
-                    <tr
-                      key={alert.id}
-                      className="border-b border-gray-200"
-                      style={{
-                        background: index % 2 === 0 ? '#ffffff' : '#d1fae5'
-                      }}
-                    >
-                      <td className="px-6 py-4 font-semibold text-gray-700">{alert.date}</td>
-                      <td className="px-6 py-4 font-semibold text-gray-700">{alert.time}</td>
-                      <td className="px-6 py-4 font-semibold text-gray-700">{alert.motorcycle}</td>
-                      <td className="px-6 py-4 font-semibold text-gray-700">{alert.message}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-700">
-                            {alert.isRead ? 'READ' : 'UNREAD'}
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={alert.isRead}
-                            onChange={() => toggleReadStatus(alert.id)}
-                            className="w-5 h-5 cursor-pointer accent-red-500"
-                          />
-                        </div>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full av-table">
+                  <thead>
+                    <tr>
+                      <th className="text-left">Date</th>
+                      <th className="text-left">Time</th>
+                      <th className="text-left">Device</th>
+                      <th className="text-left">Message</th>
+                      <th className="text-center">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map((alert) => (
+                      <tr key={alert.id}>
+                        <td className="font-semibold">{alert.date}</td>
+                        <td className="text-white/60">{alert.time}</td>
+                        <td>
+                          <span className="badge badge-blue">{alert.motorcycle}</span>
+                        </td>
+                        <td>{alert.message}</td>
+                        <td className="text-center">
+                          <label className="flex items-center justify-center gap-2 cursor-pointer">
+                            <span className={`badge ${alert.isRead ? 'badge-green' : 'badge-red'}`}>
+                              {alert.isRead ? 'Read' : 'Unread'}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={alert.isRead}
+                              onChange={() => toggleReadStatus(alert.id)}
+                              className="w-4 h-4 cursor-pointer accent-red-500"
+                            />
+                          </label>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

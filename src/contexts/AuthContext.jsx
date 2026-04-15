@@ -13,6 +13,10 @@ import { userApi } from '../services/api';
 
 const AuthContext = createContext({});
 
+// Default admin account — change these to your preferred credentials
+const DEFAULT_ADMIN_EMAIL = 'admin@alertvibe.com';
+const DEFAULT_ADMIN_PASSWORD = 'Admin@1234';
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -57,17 +61,44 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Ensure the default admin account exists in Firebase (call once on first run)
+  const ensureDefaultAdmin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD);
+      await signOut(auth);
+      console.info('Default admin account already exists.');
+    } catch (err) {
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        try {
+          const result = await createUserWithEmailAndPassword(auth, DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD);
+          userApi.createProfile({
+            uid: result.user.uid,
+            email: DEFAULT_ADMIN_EMAIL,
+            displayName: 'Admin',
+            role: 'admin',
+          }).catch(() => {});
+          await signOut(auth);
+          console.info('Default admin account created.');
+        } catch (createErr) {
+          console.error('Failed to create default admin account:', createErr.message);
+        }
+      }
+    }
+  };
+
   // Sign up with email and password
   const signup = async (email, password, displayName) => {
     try {
       setError(null);
       const result = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Create user profile in backend
-      await userApi.createProfile({
+      // Create user profile in backend (non-blocking — backend may be cold-starting)
+      userApi.createProfile({
         uid: result.user.uid,
         email: result.user.email,
         displayName: displayName || null,
+      }).catch((err) => {
+        console.warn('Profile creation failed (will retry on next login):', err.message);
       });
 
       return result;
@@ -157,10 +188,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Helper functions for role checking
-  const isAdmin = () => userProfile?.role === 'admin';
-  const isSecurity = () => userProfile?.role === 'security' || userProfile?.role === 'admin';
-  const isUser = () => !!userProfile;
-  const getUserRole = () => userProfile?.role || 'user';
+  const isDefaultAdmin = () => currentUser?.email === DEFAULT_ADMIN_EMAIL;
+  const isAdmin = () => isDefaultAdmin() || userProfile?.role === 'admin';
+  const isSecurity = () => isDefaultAdmin() || userProfile?.role === 'security' || userProfile?.role === 'admin';
+  const isUser = () => !!userProfile || isDefaultAdmin();
+  const getUserRole = () => isDefaultAdmin() ? 'admin' : (userProfile?.role || 'user');
 
   const value = {
     currentUser,
@@ -173,6 +205,10 @@ export const AuthProvider = ({ children }) => {
     signInWithGoogle,
     updateProfile,
     fetchUserProfile,
+    ensureDefaultAdmin,
+    // Default admin credentials (for display/reference only)
+    DEFAULT_ADMIN_EMAIL,
+    DEFAULT_ADMIN_PASSWORD,
     // Role helpers
     isAdmin,
     isSecurity,
@@ -183,10 +219,16 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={value}>
       {loading ? (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
+        <div className="av-bg min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="av-logo" style={{ width: 56, height: 56, borderRadius: 16 }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V6L12 2z" fill="white" fillOpacity="0.9"/>
+                <path d="M9 12l2 2 4-4" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="av-spinner" />
+            <p className="text-white/40 text-sm font-medium tracking-wide">Loading AlertVibe…</p>
           </div>
         </div>
       ) : (
