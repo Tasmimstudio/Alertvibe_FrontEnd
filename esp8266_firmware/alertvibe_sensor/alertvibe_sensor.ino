@@ -1,28 +1,24 @@
 /**
  * AlertVibe - ESP8266 Vibration Sensor Firmware
- * Hardware: ESP8266 NodeMCU + SW-40 Vibration Sensor + 4 LEDs
+ * Hardware: ESP8266 NodeMCU + SW-40 Vibration Sensor + 5 LEDs
  *
  * Wiring:
  *   SW-40 VCC  → 3.3V
  *   SW-40 GND  → GND
  *   SW-40 DO   → D2 (GPIO4)
  *
- *   D1 → 220Ω → Blue   LED (+) → LED (−) → GND   (WiFi status)
- *   D7 → 220Ω → Green  LED (+) → LED (−) → GND   (device monitoring)
- *   D6 → 220Ω → Yellow LED (+) → LED (−) → GND   (mild vibration)
- *   D5 → 220Ω → Red    LED (+) → LED (−) → GND   (alert threshold)
+ *   GREEN  LED → D1 (GPIO5)  — WiFi connected
+ *   BLUE   LED → D0 (GPIO16) — Low detection
+ *   YELLOW LED → D5 (GPIO14) — Medium detection
+ *   RED    LED → D6 (GPIO12) — Hard / critical threat
+ *   BLUE   LED → D7 (GPIO13) — Safe, device working
  *
- * LED Behavior:
- *   BLUE   — Slow blink = connecting to WiFi
- *            Solid ON   = WiFi connected
- *            OFF        = WiFi lost
- *   GREEN  — Solid ON = actively monitoring for vibration
- *   YELLOW — ON when pulse count reaches LOW_THRESHOLD  (mild vibration)
- *   RED    — ON when pulse count reaches HIGH_THRESHOLD (alert sent)
+ *   (Each LED anode → pin through 220Ω resistor, cathode → GND)
  *
- * Thresholds:
- *   LOW_THRESHOLD  = 3 pulses → Yellow LED only
- *   HIGH_THRESHOLD = 6 pulses → Red LED + send alert
+ * Detection levels:
+ *   3+  pulses → LOW    (BLUE D0 on)
+ *   5+  pulses → MEDIUM (YELLOW on)
+ *   7+  pulses → HARD   (RED on, alert sent)
  */
 
 #include <ESP8266WiFi.h>
@@ -39,21 +35,24 @@ const char* LOCATION      = "Motorcycle";
 
 // Pin assignments
 #define VIBRATION_PIN   D2   // GPIO4  — SW-40 data output (active LOW)
-#define RED_LED_PIN     D5   // GPIO14 — High vibration / alert sent
-#define YELLOW_LED_PIN  D6   // GPIO12 — Mild vibration detected
-#define GREEN_LED_PIN   D7   // GPIO13 — Device actively monitoring
-#define BLUE_LED_PIN    D1   // GPIO5  — WiFi connection status
 
-// Vibration thresholds (pulse count)
-#define LOW_THRESHOLD   3    // Yellow LED ON  — mild vibration
-#define HIGH_THRESHOLD  6    // Red LED ON     — alert triggered
+#define LED_GREEN       D1   // GPIO5  — WiFi connected
+#define LED_BLUE_LOW    D0   // GPIO16 — Low detection
+#define LED_YELLOW      D5   // GPIO14 — Medium detection
+#define LED_RED         D6   // GPIO12 — Hard / critical threat
+#define LED_BLUE_SAFE   D7   // GPIO13 — Safe / device working
+
+// Detection thresholds (pulse count)
+#define LOW_THRESHOLD   3    // 3+  pulses  → low
+#define MED_THRESHOLD   5    // 5+  pulses  → medium
+#define HIGH_THRESHOLD  7    // 7+  pulses  → hard / alert
 
 // Timing (milliseconds)
 #define DEBOUNCE_MS     50
 #define COOLDOWN_MS     10000
 #define WIFI_TIMEOUT    20000
-#define LED_HOLD_MS     2000
-#define PULSE_WINDOW_MS 3000   // Window to count pulses
+#define LED_HOLD_MS     150
+#define PULSE_WINDOW_MS 4000
 
 // ─── State ───────────────────────────────────────────────────────────────────
 unsigned long lastAlertTime     = 0;
@@ -63,30 +62,18 @@ bool          vibrating         = false;
 int           pulseCount        = 0;
 
 // ─── LED Helpers ─────────────────────────────────────────────────────────────
-void setBlue  (bool on) { digitalWrite(BLUE_LED_PIN,   on ? HIGH : LOW); }
-void setGreen (bool on) { digitalWrite(GREEN_LED_PIN,  on ? HIGH : LOW); }
-void setYellow(bool on) { digitalWrite(YELLOW_LED_PIN, on ? HIGH : LOW); }
-void setRed   (bool on) { digitalWrite(RED_LED_PIN,    on ? HIGH : LOW); }
-
 void allLedsOff() {
-  setBlue(false);
-  setGreen(false);
-  setYellow(false);
-  setRed(false);
+  digitalWrite(LED_GREEN,     LOW);
+  digitalWrite(LED_BLUE_LOW,  LOW);
+  digitalWrite(LED_YELLOW,    LOW);
+  digitalWrite(LED_RED,       LOW);
+  digitalWrite(LED_BLUE_SAFE, LOW);
 }
 
-void blinkAll(int times, int ms = 150) {
-  for (int i = 0; i < times; i++) {
-    setBlue(true); setGreen(true); setYellow(true); setRed(true); delay(ms);
-    allLedsOff();                                                  delay(ms);
-  }
-}
-
-void blinkRed(int times, int ms = 80) {
-  for (int i = 0; i < times; i++) {
-    setRed(true);  delay(ms);
-    setRed(false); delay(ms);
-  }
+void setSafeState() {
+  allLedsOff();
+  digitalWrite(LED_GREEN,     HIGH);
+  digitalWrite(LED_BLUE_SAFE, HIGH);
 }
 
 // ─── WiFi ─────────────────────────────────────────────────────────────────────
@@ -95,18 +82,24 @@ void connectWiFi() {
   Serial.println(WIFI_SSID);
 
   allLedsOff();
+  digitalWrite(LED_BLUE_SAFE, HIGH);   // Device is alive
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   unsigned long start = millis();
+  bool blink = false;
   while (WiFi.status() != WL_CONNECTED) {
     if (millis() - start > WIFI_TIMEOUT) {
       Serial.println("\nWiFi timeout — restarting");
+      allLedsOff();
+      delay(1500);
       ESP.restart();
     }
-    // Blue slow blink while connecting to WiFi
-    setBlue(true);  delay(300);
-    setBlue(false); delay(300);
+    // Blink green while connecting
+    blink = !blink;
+    digitalWrite(LED_GREEN, blink ? HIGH : LOW);
+    delay(500);
     Serial.print(".");
   }
 
@@ -114,9 +107,8 @@ void connectWiFi() {
   Serial.print("Connected! IP: ");
   Serial.println(WiFi.localIP());
 
-  blinkAll(3);       // All 4 LEDs blink 3x = WiFi connected
-  setBlue(true);     // Blue stays solid = WiFi connected
-  setGreen(true);    // Green stays solid = device monitoring
+  setSafeState();
+  delay(2000);
 }
 
 // ─── Alert ────────────────────────────────────────────────────────────────────
@@ -130,19 +122,27 @@ bool sendAlert(int count) {
   HTTPClient http;
 
   http.begin(client, BACKEND_URL);
-  http.setTimeout(15000);   // 15s timeout — gives Render time to wake up
+  http.setTimeout(15000);
   http.addHeader("Content-Type", "application/json");
 
-  // Severity scales with pulse count
-  const char* sev = "high";
-  if      (count >= HIGH_THRESHOLD * 2) sev = "critical";
-  else if (count >= HIGH_THRESHOLD)     sev = "high";
-  else                                  sev = "medium";
+  const char* sev;
+  const char* msg;
+  if (count >= HIGH_THRESHOLD * 2) {
+    sev = "critical";
+    msg = "Extreme vibration detected. Motorcycle may be under attack!";
+  } else if (count >= HIGH_THRESHOLD) {
+    sev = "high";
+    msg = "Strong vibration detected. Possible tampering in progress!";
+  } else {
+    sev = "medium";
+    msg = "Low-level vibration detected. Stay alert.";
+  }
 
-  // Build JSON payload
   String payload = "{\"deviceId\":\"";
   payload += DEVICE_ID;
-  payload += "\",\"message\":\"Vibration detected - possible tampering!\",\"severity\":\"";
+  payload += "\",\"message\":\"";
+  payload += msg;
+  payload += "\",\"severity\":\"";
   payload += sev;
   payload += "\",\"meta\":{\"location\":\"";
   payload += LOCATION;
@@ -153,18 +153,26 @@ bool sendAlert(int count) {
   Serial.print("POST → ");
   Serial.println(payload);
 
-  ESP.wdtFeed();   // Feed watchdog before long HTTP request
+  ESP.wdtFeed();
   int httpCode = http.POST(payload);
-  ESP.wdtFeed();   // Feed again after
+  ESP.wdtFeed();
   bool success = (httpCode == 200 || httpCode == 201);
 
   if (success) {
     Serial.println("Alert sent!");
-    blinkRed(5, 80);    // Red rapid blink 5x = success
+    // Flash RED 3 times to confirm alert sent
+    for (int i = 0; i < 3; i++) {
+      digitalWrite(LED_RED, HIGH); delay(200);
+      digitalWrite(LED_RED, LOW);  delay(200);
+    }
   } else {
     Serial.print("HTTP error: ");
     Serial.println(httpCode);
-    blinkRed(2, 500);   // Red 2 slow blinks = error
+    // Flash YELLOW to indicate send failure
+    for (int i = 0; i < 3; i++) {
+      digitalWrite(LED_YELLOW, HIGH); delay(200);
+      digitalWrite(LED_YELLOW, LOW);  delay(200);
+    }
   }
 
   http.end();
@@ -177,18 +185,33 @@ void setup() {
   delay(100);
   Serial.println("\n=== AlertVibe Sensor Starting ===");
 
-  pinMode(BLUE_LED_PIN,   OUTPUT);
-  pinMode(GREEN_LED_PIN,  OUTPUT);
-  pinMode(YELLOW_LED_PIN, OUTPUT);
-  pinMode(RED_LED_PIN,    OUTPUT);
-  pinMode(VIBRATION_PIN,  INPUT);
-
+  pinMode(LED_GREEN,     OUTPUT);
+  pinMode(LED_BLUE_LOW,  OUTPUT);
+  pinMode(LED_YELLOW,    OUTPUT);
+  pinMode(LED_RED,       OUTPUT);
+  pinMode(LED_BLUE_SAFE, OUTPUT);
   allLedsOff();
+
+  // Startup blink — all LEDs on briefly
+  digitalWrite(LED_GREEN,     HIGH);
+  digitalWrite(LED_BLUE_LOW,  HIGH);
+  digitalWrite(LED_YELLOW,    HIGH);
+  digitalWrite(LED_RED,       HIGH);
+  digitalWrite(LED_BLUE_SAFE, HIGH);
+  delay(800);
+  allLedsOff();
+  delay(200);
+
+  pinMode(VIBRATION_PIN, INPUT);
+
   connectWiFi();
 
   Serial.println("Monitoring for vibration...");
-  Serial.print("LOW  threshold: "); Serial.print(LOW_THRESHOLD);  Serial.println(" pulses → Yellow");
-  Serial.print("HIGH threshold: "); Serial.print(HIGH_THRESHOLD); Serial.println(" pulses → Red + Alert");
+  Serial.print("LOW  threshold : "); Serial.print(LOW_THRESHOLD);  Serial.println(" pulses");
+  Serial.print("MED  threshold : "); Serial.print(MED_THRESHOLD);  Serial.println(" pulses");
+  Serial.print("HIGH threshold : "); Serial.print(HIGH_THRESHOLD); Serial.println(" pulses → Alert");
+
+  setSafeState();
 }
 
 // ─── Main Loop ────────────────────────────────────────────────────────────────
@@ -203,7 +226,6 @@ void loop() {
     if (!vibrating) {
       vibrating = true;
 
-      // Reset pulse window if it expired
       if (now - pulseWindowStart > PULSE_WINDOW_MS) {
         pulseCount       = 0;
         pulseWindowStart = now;
@@ -212,26 +234,30 @@ void loop() {
       pulseCount++;
       Serial.print("Pulse! Count: ");
       Serial.println(pulseCount);
+
+      // Update LEDs based on detection level
+      if (pulseCount >= HIGH_THRESHOLD) {
+        allLedsOff();
+        digitalWrite(LED_GREEN, HIGH);
+        digitalWrite(LED_RED,   HIGH);        // HARD — critical threat
+        Serial.println("!! HARD — Critical Threat !!");
+      } else if (pulseCount >= MED_THRESHOLD) {
+        allLedsOff();
+        digitalWrite(LED_GREEN,  HIGH);
+        digitalWrite(LED_YELLOW, HIGH);       // MEDIUM detection
+        Serial.println("MEDIUM detection");
+      } else {
+        allLedsOff();
+        digitalWrite(LED_GREEN,    HIGH);
+        digitalWrite(LED_BLUE_LOW, HIGH);     // LOW detection
+        Serial.println("LOW detection");
+      }
     }
 
   } else {
     if (vibrating && (now - lastVibrationTime >= LED_HOLD_MS)) {
       vibrating = false;
     }
-  }
-
-  // ── LED Threshold Display ───────────────────────────────────────────────
-  if (pulseCount >= HIGH_THRESHOLD) {
-    setYellow(true);
-    setRed(true);                    // RED + YELLOW = alert level
-
-  } else if (pulseCount >= LOW_THRESHOLD) {
-    setYellow(true);
-    setRed(false);                   // YELLOW only = mild vibration
-
-  } else {
-    setYellow(false);
-    setRed(false);                   // GREEN only = idle
   }
 
   // ── Send Alert at HIGH threshold ────────────────────────────────────────
@@ -247,10 +273,8 @@ void loop() {
 
     sendAlert(countToSend);
 
-    // After alert: reset to green only
-    setYellow(false);
-    setRed(false);
-    setGreen(true);
+    delay(2000);
+    setSafeState();
   }
 
   // ── Reset after pulse window expires ────────────────────────────────────
@@ -258,16 +282,7 @@ void loop() {
     Serial.print("Window expired. Pulses this round: ");
     Serial.println(pulseCount);
     pulseCount = 0;
-    setYellow(false);
-    setRed(false);
-  }
-
-  // ── Blue LED tracks WiFi status in real time ─────────────────────────────
-  if (WiFi.status() == WL_CONNECTED) {
-    setBlue(true);   // Solid blue = WiFi connected
-  } else {
-    // Blink blue = WiFi dropped, trying to reconnect
-    setBlue((now / 300) % 2 == 0);
+    setSafeState();
   }
 
   delay(10);

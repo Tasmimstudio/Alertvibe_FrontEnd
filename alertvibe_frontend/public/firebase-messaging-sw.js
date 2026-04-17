@@ -6,12 +6,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-comp
 
 // Your Firebase config — must match your .env.local values
 firebase.initializeApp({
-  apiKey:            "AIzaSyBHgmMopQ4QhZPpevtyL4cprl7pAlEbC_k",
-  authDomain:        "alertvibe-d6892.firebaseapp.com",
-  projectId:         "alertvibe-d6892",
-  storageBucket:     "alertvibe-d6892.firebasestorage.app",
-  messagingSenderId: "83770294258",
-  appId:             "1:83770294258:web:fe00464a7fdfd512fbf56b"
+  apiKey:            "AIzaSyAVjhZOvqQWwXlJZnSPJVcrUiyDlyqMQMM",
+  authDomain:        "alertvibe-6f041.firebaseapp.com",
+  projectId:         "alertvibe-6f041",
+  storageBucket:     "alertvibe-6f041.firebasestorage.app",
+  messagingSenderId: "1000081958230",
+  appId:             "1:1000081958230:web:84bb95ecc86ee7b934e2f7"
 });
 
 const messaging = firebase.messaging();
@@ -20,8 +20,8 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('Background notification received:', payload);
 
-  const title = payload.notification?.title || 'AlertVibe - Vibration Detected!';
-  const body  = payload.notification?.body  || 'Possible tampering detected on your device.';
+  const title = payload.notification?.title || 'TAMPERING ALERT - Your Motorcycle!';
+  const body  = payload.notification?.body  || 'Vibration detected on your motorcycle. Check your vehicle immediately!';
 
   const options = {
     body:    body,
