@@ -182,16 +182,22 @@ function SecurityAlertLog() {
             </div>
           </div>
         </div>
-        {userProfile?.photoURL ? (
-          <img src={userProfile.photoURL} alt="Profile"
-               className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-               style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
-        ) : (
-          <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
-               style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
-            {initials}
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block text-right">
+            <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
+            <p className="text-amber-400 text-xs font-semibold">Security</p>
           </div>
-        )}
+          {userProfile?.photoURL ? (
+            <img src={userProfile.photoURL} alt="Profile"
+                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                 style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
+          ) : (
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
+                 style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
+              {initials}
+            </div>
+          )}
+        </div>
       </header>
 
       <div className="flex flex-1">
