@@ -5,17 +5,14 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithPopup,
 } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import { userApi } from '../services/api';
 
 const AuthContext = createContext({});
 
-// Default admin account — change these to your preferred credentials
+// Default admin email (created by the backend on first start)
 const DEFAULT_ADMIN_EMAIL = 'admin@alertvibe.com';
-const DEFAULT_ADMIN_PASSWORD = 'Admin@1234';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -55,36 +52,17 @@ export const AuthProvider = ({ children }) => {
           setError(createErr.message);
         }
       } else {
-        setError(err.message);
+        // Backend unreachable — use a minimal fallback so the app can still navigate
+        const fallback = { uid: user.uid, email: user.email, role: 'user' };
+        setUserProfile(fallback);
+        return fallback;
       }
       return null;
     }
   };
 
-  // Ensure the default admin account exists in Firebase (call once on first run)
-  const ensureDefaultAdmin = async () => {
-    try {
-      await signInWithEmailAndPassword(auth, DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD);
-      await signOut(auth);
-      console.info('Default admin account already exists.');
-    } catch (err) {
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        try {
-          const result = await createUserWithEmailAndPassword(auth, DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD);
-          userApi.createProfile({
-            uid: result.user.uid,
-            email: DEFAULT_ADMIN_EMAIL,
-            displayName: 'Admin',
-            role: 'admin',
-          }).catch(() => {});
-          await signOut(auth);
-          console.info('Default admin account created.');
-        } catch (createErr) {
-          console.error('Failed to create default admin account:', createErr.message);
-        }
-      }
-    }
-  };
+  // No-op: admin account is created server-side on backend startup
+  const ensureDefaultAdmin = async () => {};
 
   // Sign up with email and password
   const signup = async (email, password, displayName) => {
@@ -206,9 +184,7 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     fetchUserProfile,
     ensureDefaultAdmin,
-    // Default admin credentials (for display/reference only)
     DEFAULT_ADMIN_EMAIL,
-    DEFAULT_ADMIN_PASSWORD,
     // Role helpers
     isAdmin,
     isSecurity,

@@ -61,22 +61,8 @@ function ProtectedRoute({ children, requiredRole }) {
 }
 
 function AppContent() {
-  const { ensureDefaultAdmin } = useAuth();
-
   useEffect(() => {
-    // Create default admin account in Firebase if it doesn't exist yet
-    ensureDefaultAdmin();
-
-    // Request notification permission when app loads
-    requestNotificationPermission()
-      .then((token) => {
-        if (token) {
-          console.log('Notification permission granted and token saved');
-        }
-      })
-      .catch((error) => {
-        console.error('Error requesting notification permission:', error);
-      });
+    requestNotificationPermission().catch(() => {});
   }, []);
 
   return (
@@ -105,7 +91,7 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <AppContent />
       </AuthProvider>
