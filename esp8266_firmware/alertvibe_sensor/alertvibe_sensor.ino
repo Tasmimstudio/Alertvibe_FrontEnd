@@ -1,29 +1,29 @@
 /**
- * AlertVibe - ESP8266 Vibration Sensor Firmware
- * Hardware: ESP8266 NodeMCU + SW-40 Vibration Sensor + 5 LEDs
+ * AlertVibe - ESP32 Vibration Sensor Firmware
+ * Hardware: ESP32 + SW-40 Vibration Sensor + 5 LEDs
  *
  * Wiring:
  *   SW-40 VCC  → 3.3V
  *   SW-40 GND  → GND
- *   SW-40 DO   → D2 (GPIO4)
+ *   SW-40 DO   → GPIO4
  *
- *   GREEN  LED → D1 (GPIO5)  — WiFi connected
- *   BLUE   LED → D0 (GPIO16) — Low detection
- *   YELLOW LED → D5 (GPIO14) — Medium detection
- *   RED    LED → D6 (GPIO12) — Hard / critical threat
- *   BLUE   LED → D7 (GPIO13) — Safe, device working
+ *   GREEN  LED → GPIO5  — WiFi connected
+ *   BLUE   LED → GPIO16 — Low detection
+ *   YELLOW LED → GPIO17 — Medium detection
+ *   RED    LED → GPIO18 — Hard / critical threat
+ *   BLUE   LED → GPIO19 — Safe, device working
  *
  *   (Each LED anode → pin through 220Ω resistor, cathode → GND)
  *
  * Detection levels:
- *   3+  pulses → LOW    (BLUE D0 on)
- *   5+  pulses → MEDIUM (YELLOW on)
- *   7+  pulses → HARD   (RED on, alert sent)
+ *   2+  pulses → LOW    (BLUE GPIO16 on)
+ *   3+  pulses → MEDIUM (YELLOW on)
+ *   5+  pulses → HARD   (RED on, alert sent)
  */
 
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 
 // ─── CONFIGURE THESE ────────────────────────────────────────────────────────
 const char* WIFI_SSID     = "SIGIDAS";
@@ -33,26 +33,26 @@ const char* DEVICE_ID     = "motorcycle-01";
 const char* LOCATION      = "Motorcycle";
 // ────────────────────────────────────────────────────────────────────────────
 
-// Pin assignments
-#define VIBRATION_PIN   D2   // GPIO4  — SW-40 data output (active LOW)
+// Pin assignments (ESP32 uses direct GPIO numbers)
+#define VIBRATION_PIN   4    // GPIO4  — SW-40 data output (active LOW)
 
-#define LED_GREEN       D1   // GPIO5  — WiFi connected
-#define LED_BLUE_LOW    D0   // GPIO16 — Low detection
-#define LED_YELLOW      D5   // GPIO14 — Medium detection
-#define LED_RED         D6   // GPIO12 — Hard / critical threat
-#define LED_BLUE_SAFE   D7   // GPIO13 — Safe / device working
+#define LED_GREEN       5    // GPIO5  — WiFi connected
+#define LED_BLUE_LOW    16   // GPIO16 — Low detection
+#define LED_YELLOW      17   // GPIO17 — Medium detection
+#define LED_RED         18   // GPIO18 — Hard / critical threat
+#define LED_BLUE_SAFE   19   // GPIO19 — Safe / device working
 
 // Detection thresholds (pulse count)
-#define LOW_THRESHOLD   3    // 3+  pulses  → low
-#define MED_THRESHOLD   5    // 5+  pulses  → medium
-#define HIGH_THRESHOLD  7    // 7+  pulses  → hard / alert
+#define LOW_THRESHOLD   2    // 2+  pulses  → low
+#define MED_THRESHOLD   3    // 3+  pulses  → medium
+#define HIGH_THRESHOLD  5    // 5+  pulses  → hard / alert
 
 // Timing (milliseconds)
-#define DEBOUNCE_MS     50
-#define COOLDOWN_MS     10000
+#define DEBOUNCE_MS     20
+#define COOLDOWN_MS     5000
 #define WIFI_TIMEOUT    20000
-#define LED_HOLD_MS     150
-#define PULSE_WINDOW_MS 4000
+#define LED_HOLD_MS     75
+#define PULSE_WINDOW_MS 2000
 
 // ─── State ───────────────────────────────────────────────────────────────────
 unsigned long lastAlertTime     = 0;
@@ -118,9 +118,10 @@ bool sendAlert(int count) {
     connectWiFi();
   }
 
-  WiFiClient client;
-  HTTPClient http;
+  WiFiClientSecure client;
+  client.setInsecure();   // Skip SSL certificate verification
 
+  HTTPClient http;
   http.begin(client, BACKEND_URL);
   http.setTimeout(15000);
   http.addHeader("Content-Type", "application/json");
@@ -153,9 +154,7 @@ bool sendAlert(int count) {
   Serial.print("POST → ");
   Serial.println(payload);
 
-  ESP.wdtFeed();
   int httpCode = http.POST(payload);
-  ESP.wdtFeed();
   bool success = (httpCode == 200 || httpCode == 201);
 
   if (success) {
@@ -285,5 +284,5 @@ void loop() {
     setSafeState();
   }
 
-  delay(10);
+  delay(5);
 }

@@ -1,387 +1,428 @@
-# AlertVibe - Security Alert System
+# AlertVibe — Motorcycle Vibration Security System
 
-A real-time vibration detection and alert notification system built with React, Express, and Firebase Cloud Messaging.
-
-## 🎯 Overview
-
-AlertVibe monitors devices for vibration/tampering and sends instant push notifications to security personnel through a web dashboard.
-
-### Features
-
-- 📱 **Real-time Push Notifications** - Firebase Cloud Messaging
-- 📊 **Alert Dashboard** - View and manage security alerts
-- 📜 **Alert History** - Track all past incidents
-- 🔔 **Browser Notifications** - Desktop/mobile push alerts
-- ☁️ **Cloud Storage** - Firestore database for alert persistence
-- 🚀 **RESTful API** - Easy integration with IoT devices
+A real-time vibration detection and alert system built with ESP32, React, Express.js, Firebase Firestore, and Firebase Cloud Messaging (FCM). When the sensor detects tampering, it instantly pushes notifications to all registered browsers and security personnel dashboards.
 
 ---
 
-## 🏗️ Project Structure
+## System Architecture
+
+```
+[ESP32 + SW-40 Sensor]
+        |
+        | HTTP POST /api/alerts
+        ↓
+[Backend — Express.js on Render]
+        |               |
+        ↓               ↓
+  [Firestore DB]    [Firebase FCM]
+                        |
+                        ↓
+          [Browser Push Notification]
+                        |
+                        ↓
+            [React Frontend Dashboard]
+```
+
+---
+
+## Project Structure
 
 ```
 Alertvibe/
-├── alertvibe_backend/          # Express.js API server
-│   ├── config/                 # Firebase Admin configuration
-│   ├── controllers/            # Business logic
-│   ├── routes/                 # API routes
-│   ├── .env                    # Backend environment variables
-│   ├── server.js               # Express server entry point
-│   └── package.json            # Backend dependencies
+├── alertvibe_backend/
+│   ├── config/
+│   │   ├── firebaseConfig.js        # Firebase Admin SDK init
+│   │   └── cloudinaryConfig.js      # Cloudinary image upload
+│   ├── controllers/
+│   │   ├── alertController.js       # Alert CRUD + FCM send
+│   │   ├── userController.js        # User profile management
+│   │   ├── adminController.js       # Admin dashboard logic
+│   │   └── motorcycleController.js  # Motorcycle registration
+│   ├── middleware/
+│   │   ├── authMiddleware.js        # Firebase token verification
+│   │   └── upload.js                # Cloudinary multer config
+│   ├── routes/
+│   │   ├── alertRoutes.js
+│   │   ├── userRoutes.js
+│   │   ├── adminRoutes.js
+│   │   ├── securityRoutes.js
+│   │   └── motorcycleRoutes.js
+│   ├── serviceAccountKey.json       # Firebase Admin key (gitignored)
+│   ├── server.js                    # Express entry point
+│   ├── render.yaml                  # Render deploy config
+│   └── package.json
 │
-├── alertvibe_frontend/         # React web application
-│   ├── public/                 # Static files & service worker
+├── alertvibe_frontend/
+│   ├── public/
+│   │   └── firebase-messaging-sw.js # FCM background service worker
 │   ├── src/
-│   │   ├── components/         # React components (Navbar)
-│   │   ├── pages/              # Dashboard & AlertHistory
-│   │   ├── services/           # Firebase FCM service
-│   │   ├── App.jsx             # Main app component
-│   │   └── main.jsx            # React entry point
-│   ├── .env.local              # Frontend environment variables
-│   ├── vite.config.js          # Vite configuration
-│   └── package.json            # Frontend dependencies
+│   │   ├── contexts/
+│   │   │   └── AuthContext.jsx      # Firebase Auth context
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx        # User dashboard
+│   │   │   ├── AdminDashboard.jsx   # Admin panel
+│   │   │   ├── SecurityDashboard.jsx
+│   │   │   ├── SecurityAlertLog.jsx
+│   │   │   ├── AlertHistory.jsx
+│   │   │   ├── DeviceRegistration.jsx
+│   │   │   ├── Login.jsx
+│   │   │   └── Registration.jsx
+│   │   ├── services/
+│   │   │   ├── api.js               # Backend API calls
+│   │   │   └── NotificationService.js # FCM token + subscription
+│   │   ├── firebaseConfig.js        # Firebase client SDK init
+│   │   └── App.jsx                  # Routes + auth guards
+│   ├── .env.local                   # Frontend env vars (gitignored)
+│   └── package.json
 │
-├── FIREBASE_SETUP_GUIDE.md     # Detailed Firebase setup
-├── QUICK_START.md              # Quick reference guide
-└── README.md                   # This file
+└── esp8266_firmware/
+    └── alertvibe_sensor/
+        └── alertvibe_sensor.ino     # ESP32 firmware
 ```
 
 ---
 
-## 🚀 Quick Start
+## Hardware
 
-### Prerequisites
+### Components
 
-- Node.js 18+ and npm
-- Firebase account (free tier works)
-- Modern web browser (Chrome, Firefox, Edge)
+| Component | Quantity |
+|---|---|
+| ESP32 Dev Module | 1 |
+| SW-40 Vibration Sensor | 1 |
+| Green LED | 1 |
+| Blue LED (x2) | 2 |
+| Yellow LED | 1 |
+| Red LED | 1 |
+| 220Ω Resistors | 5 |
+| Jumper wires | — |
 
-### 1. Clone & Install
+### Wiring
+
+```
+SW-40 VCC  → 3.3V
+SW-40 GND  → GND
+SW-40 DO   → GPIO4
+
+GREEN  LED → GPIO5   (WiFi connected)
+BLUE   LED → GPIO16  (Low vibration)
+YELLOW LED → GPIO17  (Medium vibration)
+RED    LED → GPIO18  (High / alert sent)
+BLUE   LED → GPIO19  (Safe / idle)
+
+Each LED: anode → GPIO pin through 220Ω resistor → cathode → GND
+```
+
+### Detection Levels
+
+| Pulse Count | Level | LED |
+|---|---|---|
+| 2+ | Low | Blue |
+| 3+ | Medium | Yellow |
+| 5+ | High — alert sent | Red |
+| 10+ | Critical | Red (stronger message) |
+
+### Firmware Configuration
+
+Open `esp8266_firmware/alertvibe_sensor/alertvibe_sensor.ino` and set:
+
+```cpp
+const char* WIFI_SSID     = "YOUR_WIFI_NAME";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* BACKEND_URL   = "https://alertvibe-backend.onrender.com/api/alerts";
+const char* DEVICE_ID     = "motorcycle-01";
+const char* LOCATION      = "Motorcycle";
+```
+
+### Upload to ESP32
+
+1. Install **Arduino IDE**
+2. Go to **File → Preferences** → Additional Board URLs → add:
+   ```
+   https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+   ```
+3. **Tools → Board → ESP32 Dev Module**
+4. **Tools → Port → COMx**
+5. Click **Upload**
+6. Open **Serial Monitor at 115200 baud** to watch live output
+
+---
+
+## Firebase Project
+
+| Setting | Value |
+|---|---|
+| Project ID | `alertvibe-6f041` |
+| Auth Domain | `alertvibe-6f041.firebaseapp.com` |
+| Messaging Sender ID | `1000081958230` |
+| App ID | `1:1000081958230:web:84bb95ecc86ee7b934e2f7` |
+
+### Services Used
+
+- **Firebase Authentication** — user login / registration
+- **Firestore** — stores alerts, users, motorcycles, FCM tokens
+- **Firebase Cloud Messaging (FCM)** — push notifications to browsers
+
+### Firestore Collections
+
+| Collection | Purpose |
+|---|---|
+| `users` | User profiles and roles |
+| `alerts` | Vibration alert records |
+| `motorcycles` | Registered motorcycles |
+| `fcm_tokens` | Browser FCM tokens |
+
+---
+
+## User Roles
+
+| Role | Access |
+|---|---|
+| `user` | Dashboard, own motorcycle, own alerts |
+| `security` | Security dashboard, all alerts, respond to alerts |
+| `admin` | Everything — user management, all data |
+
+Default admin account created on first startup:
+```
+Email:    admin@alertvibe.com
+Password: admin123
+```
+
+---
+
+## Backend
+
+### Live URL
+```
+https://alertvibe-backend.onrender.com
+```
+
+### Local Setup
 
 ```bash
-cd C:\Users\TO GOD BE THE GLORY\Alertvibe
-
-# Install backend dependencies
 cd alertvibe_backend
 npm install
-
-# Install frontend dependencies
-cd ../alertvibe_frontend
-npm install
+node server.js
+# Runs on http://localhost:4000
 ```
 
-✅ **Already installed!** (433 frontend packages, 205 backend packages)
+### Environment Variables — Local (`.env`)
 
-### 2. Configure Firebase
-
-Follow the **QUICK_START.md** guide or detailed **FIREBASE_SETUP_GUIDE.md**
-
-**Summary:**
-1. Create Firebase project
-2. Enable Firestore & Cloud Messaging
-3. Download service account key → `alertvibe_backend/serviceAccountKey.json`
-4. Get web app credentials → Update `alertvibe_frontend/.env.local`
-5. Update `alertvibe_frontend/public/firebase-messaging-sw.js`
-
-### 3. Start Development Servers
-
-**Terminal 1 - Backend:**
-```bash
-cd alertvibe_backend
-npm start
-```
-→ Runs on `http://localhost:4000`
-
-**Terminal 2 - Frontend:**
-```bash
-cd alertvibe_frontend
-npm run dev
-```
-→ Runs on `http://localhost:5173`
-
-### 4. Open Application
-
-Navigate to: `http://localhost:5173`
-
----
-
-## 📡 API Endpoints
-
-Base URL: `http://localhost:4000`
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Health check |
-| POST | `/api/alerts` | Create new alert & send FCM notification |
-| GET | `/api/alerts` | List all alerts (latest 200) |
-| GET | `/api/alerts/:id` | Get specific alert by ID |
-| DELETE | `/api/alerts/:id` | Delete alert |
-
-### Example: Create Alert
-
-```bash
-curl -X POST http://localhost:4000/api/alerts \
-  -H "Content-Type: application/json" \
-  -d '{
-    "deviceId": "sensor-001",
-    "message": "Vibration detected on door sensor",
-    "severity": "high",
-    "meta": {
-      "location": "Main entrance",
-      "intensity": 7.5
-    }
-  }'
-```
-
-Response:
-```json
-{
-  "id": "abc123xyz"
-}
-```
-
----
-
-## 🛠️ Technology Stack
-
-### Backend
-- **Express.js 5.1.0** - Web framework
-- **Firebase Admin SDK 13.6.0** - Server-side Firebase
-- **Firestore** - NoSQL cloud database
-- **CORS** - Cross-origin resource sharing
-- **Morgan** - HTTP request logger
-
-### Frontend
-- **React 18.2.0** - UI library
-- **Vite 5.1.0** - Build tool & dev server
-- **React Router 6.22.0** - Client-side routing
-- **Firebase SDK 10.8.0** - Client-side Firebase
-- **Tailwind CSS 3.4.1** - Utility-first CSS
-- **FCM** - Push notifications
-
----
-
-## 📱 How It Works
-
-1. **Device Detection**: IoT sensor detects vibration/tampering
-2. **Alert Creation**: Device sends POST request to `/api/alerts`
-3. **Database Storage**: Alert saved to Firestore with timestamp
-4. **Push Notification**: FCM sends notification to topic "security"
-5. **Dashboard Update**: Frontend receives real-time alert
-6. **User Response**: Security personnel view and acknowledge alert
-
-```
-[IoT Device] → [Backend API] → [Firestore]
-                     ↓
-                  [FCM] → [Web Dashboard] → [User]
-```
-
----
-
-## 🔐 Security Considerations
-
-### Current Setup (Development)
-⚠️ Firestore rules set to test mode - **DO NOT USE IN PRODUCTION**
-
-### For Production
-
-1. **Update Firestore Rules:**
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /alerts/{alert} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid != null;
-      allow delete: if request.auth.uid != null;
-    }
-  }
-}
-```
-
-2. **Add Authentication:**
-   - Implement Firebase Authentication
-   - Protect API endpoints with auth middleware
-   - Validate device tokens
-
-3. **Secure Environment Variables:**
-   - Never commit `.env` or `serviceAccountKey.json`
-   - Use environment-specific configs
-   - Rotate secrets regularly
-
-4. **API Security:**
-   - Add rate limiting
-   - Implement API key authentication
-   - Use HTTPS only
-
----
-
-## 🧪 Testing
-
-### Manual Testing
-
-1. **Test Backend:**
-```bash
-curl http://localhost:4000
-```
-Expected: `ALERTVIBE Backend running`
-
-2. **Create Test Alert:**
-```bash
-curl -X POST http://localhost:4000/api/alerts \
-  -H "Content-Type: application/json" \
-  -d '{"deviceId":"test","message":"Test alert"}'
-```
-
-3. **Verify Frontend:**
-   - Open http://localhost:5173
-   - Check browser console for errors
-   - Allow notifications when prompted
-   - Verify alert appears in history
-
-### Browser Console Checks
-
-✅ `Service Worker registered`
-✅ `FCM token: <token>`
-✅ No Firebase config errors
-
----
-
-## 🐛 Troubleshooting
-
-### Backend Issues
-
-**Error: Cannot find module './serviceAccountKey.json'**
-- Ensure file exists in `alertvibe_backend/`
-- Check file name is exactly `serviceAccountKey.json`
-
-**Port 4000 already in use:**
-```bash
-# Change PORT in .env
-PORT=5000
-```
-
-### Frontend Issues
-
-**Firebase config errors:**
-- Verify all 7 values in `.env.local`
-- Check VAPID key is correct
-- Ensure no typos in environment variable names
-
-**No notifications received:**
-- Click "Allow" for browser notifications
-- Check browser console for FCM errors
-- Verify service worker registered successfully
-
-**CORS errors:**
-- Backend CORS is enabled by default
-- Check `VITE_API_URL` in `.env.local`
-
----
-
-## 📚 Documentation
-
-- **QUICK_START.md** - Fast setup checklist
-- **FIREBASE_SETUP_GUIDE.md** - Detailed Firebase configuration
-- **README.md** - This file
-
----
-
-## 🔄 Development Scripts
-
-### Backend
-```bash
-npm start          # Start production server
-npm run dev        # Start with nodemon (auto-reload)
-```
-
-### Frontend
-```bash
-npm run dev        # Start Vite dev server
-npm run build      # Build for production
-npm run preview    # Preview production build
-npm run lint       # Run ESLint
-```
-
----
-
-## 📝 Environment Variables
-
-### Backend (`.env`)
 ```env
 PORT=4000
 FIREBASE_SA_PATH=./serviceAccountKey.json
-BACKEND_SECRET=your-secret-key
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-### Frontend (`.env.local`)
-```env
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-VITE_FIREBASE_VAPID_KEY=
-VITE_API_URL=http://localhost:4000
+### Environment Variables — Render (Production)
+
+Set these in **render.com → your service → Environment**:
+
+| Key | Value |
+|---|---|
+| `NODE_ENV` | `production` |
+| `PORT` | `4000` |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | *(full JSON from serviceAccountKey.json — see below)* |
+| `CLOUDINARY_CLOUD_NAME` | *(from cloudinary.com dashboard)* |
+| `CLOUDINARY_API_KEY` | *(from cloudinary.com dashboard)* |
+| `CLOUDINARY_API_SECRET` | *(from cloudinary.com dashboard)* |
+
+#### FIREBASE_SERVICE_ACCOUNT_JSON value
+
+Paste this entire line as the value (one single line, do not add line breaks):
+
+```
+[REDACTED - set FIREBASE_SERVICE_ACCOUNT_JSON in environment variables]
 ```
 
 ---
 
-## 🚀 Deployment
+## API Endpoints
 
-### Backend Deployment
+Base URL: `https://alertvibe-backend.onrender.com`
 
-1. **Platform Options:** Heroku, Railway, Render, Google Cloud Run
-2. **Environment Variables:** Set all vars from `.env`
-3. **Service Account:** Upload `serviceAccountKey.json` securely
-4. **Start Command:** `npm start`
+### Alerts
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/alerts` | None | Create alert + send FCM (called by ESP32) |
+| GET | `/api/alerts` | None | List all alerts (latest 200) |
+| GET | `/api/alerts/:id` | None | Get single alert |
+| DELETE | `/api/alerts/:id` | None | Delete alert |
+| POST | `/api/alerts/save-token` | None | Save FCM browser token |
 
-### Frontend Deployment
+### Users
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/users` | None | Create user profile after registration |
+| POST | `/api/users/verify-token` | None | Verify Firebase ID token |
+| GET | `/api/users/profile` | Required | Get own profile |
+| PUT | `/api/users/profile` | Required | Update own profile |
+| GET | `/api/users/role` | Required | Get own role |
+| POST | `/api/users/create-with-role` | Admin | Create user with specific role |
 
-1. **Build:**
+### Motorcycles
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/motorcycles` | Required | Register motorcycle |
+| GET | `/api/motorcycles` | Required | List motorcycles |
+| GET | `/api/motorcycles/:id` | Required | Get motorcycle |
+| PUT | `/api/motorcycles/:id` | Required | Update motorcycle |
+| DELETE | `/api/motorcycles/:id` | Required | Delete motorcycle |
+| PUT | `/api/motorcycles/:id/activate` | Required | Toggle activation |
+| GET | `/api/motorcycles/search` | None | Search by plate number |
+
+### Admin
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/admin/dashboard` | Admin | Dashboard stats |
+| GET | `/api/admin/users` | Admin | List all users |
+| PUT | `/api/admin/users/:id/role` | Admin | Change user role |
+| PUT | `/api/admin/users/:id/status` | Admin | Activate/deactivate user |
+| DELETE | `/api/admin/users/:id` | Admin | Delete user |
+| GET | `/api/admin/alerts` | Admin | All alerts with filters |
+| PUT | `/api/admin/alerts/:id/respond` | Admin | Mark alert responded |
+
+### Security
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/security/dashboard` | Security | Security dashboard |
+| GET | `/api/security/alerts` | Security | View all alerts |
+| PUT | `/api/security/alerts/:id/respond` | Security | Respond to alert |
+| GET | `/api/security/motorcycles` | Security | Motorcycles with owner info |
+
+### Test Alert (no auth required)
+
+```bash
+curl -X POST https://alertvibe-backend.onrender.com/api/alerts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deviceId": "motorcycle-01",
+    "severity": "high",
+    "message": "Strong vibration detected",
+    "meta": { "location": "Motorcycle", "pulseCount": 5 }
+  }'
+```
+
+---
+
+## Frontend
+
+### Local Setup
+
+```bash
+cd alertvibe_frontend
+npm install
+npm run dev
+# Runs on http://localhost:5173
+```
+
+### Environment Variables — Local (`.env.local`)
+
+```env
+VITE_FIREBASE_API_KEY=AIzaSyAVjhZOvqQWwXlJZnSPJVcrUiyDlyqMQMM
+VITE_FIREBASE_AUTH_DOMAIN=alertvibe-6f041.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=alertvibe-6f041
+VITE_FIREBASE_STORAGE_BUCKET=alertvibe-6f041.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=1000081958230
+VITE_FIREBASE_APP_ID=1:1000081958230:web:84bb95ecc86ee7b934e2f7
+VITE_FIREBASE_VAPID_KEY=BEkJUhteSTPC_wAHi-jPxEUlxESQHkWOCykEVy6ke9WRIl3FyMtr1qSz0lFe33L-zUjPbXbAd7zOw_UaqbnEpLE
+VITE_API_URL=https://alertvibe-backend.onrender.com
+VITE_API_BASE_URL=https://alertvibe-backend.onrender.com/api
+```
+
+### Build for Production
+
 ```bash
 npm run build
+# Output in dist/ folder — deploy to Vercel, Netlify, or Firebase Hosting
 ```
 
-2. **Platform Options:** Vercel, Netlify, Firebase Hosting
-3. **Environment Variables:** Set all `VITE_*` vars
-4. **Update:** `VITE_API_URL` to production backend URL
+If deploying to Vercel or Netlify, set the same `VITE_*` environment variables above in the platform dashboard.
 
 ---
 
-## 🤝 Contributing
+## FCM Push Notification Flow
 
-This is a personal project. Feel free to fork and customize for your needs.
+```
+1. User opens app → browser requests notification permission
+2. FCM generates a unique browser token
+3. Token sent to POST /api/alerts/save-token
+4. Backend subscribes token to "security" topic
+5. ESP32 detects vibration → POST /api/alerts
+6. Backend sends FCM message to topic "security"
+7. Every subscribed browser receives the push notification
+```
+
+To verify FCM is working without the physical device, run the curl test command from the API section above and check if your browser receives a notification.
 
 ---
 
-## 📄 License
+## Technology Stack
+
+### Backend
+| Package | Version | Purpose |
+|---|---|---|
+| Express.js | 5.1.0 | Web framework |
+| firebase-admin | 13.6.0 | Firestore + FCM + Auth |
+| cloudinary | 1.41.3 | Image uploads |
+| multer | 2.0.2 | File upload handling |
+| cors | 2.8.5 | Cross-origin requests |
+| morgan | 1.10.0 | HTTP request logging |
+| dotenv | 17.2.3 | Environment variables |
+
+### Frontend
+| Package | Version | Purpose |
+|---|---|---|
+| React | 18.2.0 | UI library |
+| Vite | 5.1.0 | Build tool |
+| React Router | 6.22.0 | Client routing |
+| Firebase SDK | 10.8.0 | Auth + FCM client |
+| Tailwind CSS | 3.4.1 | Styling |
+
+---
+
+## Troubleshooting
+
+### Backend on Render
+
+| Error | Cause | Fix |
+|---|---|---|
+| `Firebase credentials not found` | `FIREBASE_SERVICE_ACCOUNT_JSON` not set | Add env var on Render dashboard |
+| `SyntaxError: Bad control character` | Private key has literal newlines | The code auto-fixes this — re-save the env var |
+| `500 on /api/motorcycles` | Missing Firestore composite index | Fixed — results are now sorted in JS |
+| `Exited with status 1` | Missing env var or wrong project key | Check Render logs for specific error |
+
+### Frontend
+
+| Error | Cause | Fix |
+|---|---|---|
+| `No FCM token` | Notifications not allowed | Click Allow when browser prompts |
+| `Failed to fetch` | Backend URL wrong | Check `VITE_API_BASE_URL` in `.env.local` |
+| React Router warnings | Missing future flags | Already fixed in `App.jsx` |
+
+### ESP32
+
+| Problem | Fix |
+|---|---|
+| No WiFi connection | Check SSID/password, must be 2.4GHz |
+| `HTTP error: -1` | Backend URL unreachable, check URL |
+| No alert on shake | Check pulse threshold — currently set to 5 |
+| LED not lighting | Check GPIO pin numbers and resistor wiring |
+
+---
+
+## Git Repositories
+
+| Repo | URL |
+|---|---|
+| Backend | `https://github.com/Tasmimstudio/Alervibe_bckend` |
+
+Render auto-deploys every time a commit is pushed to the `main` branch of the backend repo.
+
+---
+
+## License
 
 ISC License
-
----
-
-## 🆘 Support
-
-**Having issues?**
-1. Check the troubleshooting section above
-2. Review FIREBASE_SETUP_GUIDE.md
-3. Check browser console for errors
-4. Verify all environment variables are set
-
----
-
-## 🎉 Next Steps
-
-- [ ] Set up Firebase project
-- [ ] Configure environment variables
-- [ ] Test alert creation
-- [ ] Test push notifications
-- [ ] Add authentication
-- [ ] Deploy to production
-- [ ] Connect IoT devices
-
----
-
-**Built with ❤️ for security monitoring**
