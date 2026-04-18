@@ -12,7 +12,6 @@ const Logo = () => (
     </svg>
   </div>
 );
-
 const HomeIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
@@ -35,29 +34,38 @@ const LogoutIcon = () => (
   </svg>
 );
 
+const EMPTY_FORM = { plateNumber: '', model: '', color: '', deviceCode: '', department: '' };
+
 function DeviceRegistration() {
   const navigate = useNavigate();
   const { currentUser, userProfile, logout } = useAuth();
   const [motorcycles, setMotorcycles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentStatus, setCurrentStatus] = useState('');
-  const [isActivated, setIsActivated] = useState(true);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
+  const [isActivated, setIsActivated] = useState(true);
   const [uploadingPhotoId, setUploadingPhotoId] = useState(null);
   const photoInputRef = useRef(null);
+
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null); // null = adding new
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState(null);
 
   useEffect(() => { fetchMotorcycles(); }, [currentUser]);
 
   const fetchMotorcycles = async () => {
+    if (!currentUser) return;
     setLoading(true);
     try {
-      const data = await motorcycleApi.list();
-      setMotorcycles(data.motorcycles || []);
-      if (data.motorcycles?.length > 0) {
-        const first = data.motorcycles[0];
+      const data = await motorcycleApi.list({ ownerId: currentUser.uid });
+      const list = data.motorcycles || [];
+      setMotorcycles(list);
+      if (list.length > 0) {
+        const first = list[0];
         setSelectedMotorcycle(first);
         setIsActivated(first.isActivated !== false);
-        setCurrentStatus(first.location || '');
       }
     } catch (error) {
       console.error('Error fetching motorcycles:', error);
@@ -71,12 +79,59 @@ function DeviceRegistration() {
     catch (error) { console.error('Error logging out:', error); }
   };
 
+  const openAdd = () => {
+    setEditingId(null);
+    setFormData(EMPTY_FORM);
+    setFormError(null);
+    setShowModal(true);
+  };
+
+  const openEdit = (moto) => {
+    setEditingId(moto.id);
+    setFormData({
+      plateNumber: moto.plateNumber || '',
+      model: moto.model || '',
+      color: moto.color || '',
+      deviceCode: moto.deviceCode || '',
+      department: moto.department || '',
+    });
+    setFormError(null);
+    setShowModal(true);
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    const { plateNumber, model, color, deviceCode, department } = formData;
+    if (!plateNumber || !model || !color || !deviceCode) {
+      setFormError('Plate number, model, color and device code are required.');
+      return;
+    }
+    setFormLoading(true);
+    setFormError(null);
+    try {
+      if (editingId) {
+        await motorcycleApi.update(editingId, { plateNumber, model, color, deviceCode, department });
+      } else {
+        await motorcycleApi.register({
+          plateNumber, model, color, deviceCode, department,
+          ownerId: currentUser.uid,
+          ownerName: userProfile?.displayName || currentUser.email,
+        });
+      }
+      setShowModal(false);
+      fetchMotorcycles();
+    } catch (err) {
+      setFormError(err.message || 'Failed to save motorcycle.');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   const handleActivate = async () => {
     if (!selectedMotorcycle) return;
     try {
       await motorcycleApi.toggleActivation(selectedMotorcycle.id, true);
       setIsActivated(true);
-      alert('Motorcycle security system activated!');
       fetchMotorcycles();
     } catch (error) { alert('Failed to activate: ' + error.message); }
   };
@@ -86,28 +141,22 @@ function DeviceRegistration() {
     try {
       await motorcycleApi.toggleActivation(selectedMotorcycle.id, false);
       setIsActivated(false);
-      alert('Motorcycle security system deactivated!');
       fetchMotorcycles();
     } catch (error) { alert('Failed to deactivate: ' + error.message); }
   };
 
-  const handleEdit = (motorcycle) => navigate(`/register?edit=${motorcycle.id}`);
-  const handleAdd = () => navigate('/register');
-
-  const handleDelete = async (motorcycle) => {
-    if (confirm(`Delete motorcycle ${motorcycle.plateNumber}?`)) {
-      try {
-        await motorcycleApi.delete(motorcycle.id);
-        alert('Motorcycle deleted!');
-        fetchMotorcycles();
-      } catch (error) { alert('Failed to delete: ' + error.message); }
-    }
+  const handleDelete = async (moto) => {
+    if (!confirm(`Delete motorcycle ${moto.plateNumber}?`)) return;
+    try {
+      await motorcycleApi.delete(moto.id);
+      if (selectedMotorcycle?.id === moto.id) setSelectedMotorcycle(null);
+      fetchMotorcycles();
+    } catch (error) { alert('Failed to delete: ' + error.message); }
   };
 
-  const handleStatus = (motorcycle) => {
-    setSelectedMotorcycle(motorcycle);
-    setIsActivated(motorcycle.isActivated !== false);
-    setCurrentStatus(motorcycle.location || '');
+  const handleSelectStatus = (moto) => {
+    setSelectedMotorcycle(moto);
+    setIsActivated(moto.isActivated !== false);
   };
 
   const handlePhotoClick = (motorcycleId) => {
@@ -121,7 +170,6 @@ function DeviceRegistration() {
     if (file.size > 5 * 1024 * 1024) { alert('Photo must be less than 5MB'); return; }
     try {
       await motorcycleApi.uploadPhoto(uploadingPhotoId, file);
-      alert('Photo uploaded!');
       fetchMotorcycles();
     } catch (error) { alert('Failed to upload photo: ' + error.message); }
     finally { setUploadingPhotoId(null); e.target.value = ''; }
@@ -172,8 +220,8 @@ function DeviceRegistration() {
 
             {/* Page title */}
             <div className="flex items-center justify-between">
-              <h2 className="text-white font-bold text-lg">Registered Motorcycles</h2>
-              <button onClick={handleAdd} className="btn-red text-sm px-4 py-2">+ Add Motorcycle</button>
+              <h2 className="text-white font-bold text-lg">My Motorcycles</h2>
+              <button onClick={openAdd} className="btn-red text-sm px-4 py-2">+ Add Motorcycle</button>
             </div>
 
             {/* Status control */}
@@ -184,30 +232,19 @@ function DeviceRegistration() {
                   <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">
                     Selected: {selectedMotorcycle.plateNumber}
                   </p>
-                  <div className="flex items-center gap-2">
-                    <span className={`badge ${isActivated ? 'badge-green' : 'badge-red'}`}>
-                      {isActivated ? 'Active' : 'Inactive'}
-                    </span>
-                    {currentStatus && (
-                      <span className="text-white/50 text-xs">{currentStatus}</span>
-                    )}
-                  </div>
+                  <span className={`badge ${isActivated ? 'badge-green' : 'badge-red'}`}>
+                    {isActivated ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleActivate}
-                    disabled={isActivated}
+                  <button onClick={handleActivate} disabled={isActivated}
                     className="px-5 py-2 rounded-lg font-bold text-sm text-white transition-all disabled:opacity-40"
-                    style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}
-                  >
+                    style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}>
                     Activate
                   </button>
-                  <button
-                    onClick={handleDeactivate}
-                    disabled={!isActivated}
+                  <button onClick={handleDeactivate} disabled={!isActivated}
                     className="px-5 py-2 rounded-lg font-bold text-sm text-white transition-all disabled:opacity-40"
-                    style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}
-                  >
+                    style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}>
                     Deactivate
                   </button>
                 </div>
@@ -224,7 +261,7 @@ function DeviceRegistration() {
               <div className="flex flex-col items-center justify-center py-12 gap-3">
                 <span className="text-5xl">🏍️</span>
                 <p className="text-white/50 text-sm">No motorcycles registered yet.</p>
-                <button onClick={handleAdd} className="btn-red text-sm px-5 py-2">Register First Motorcycle</button>
+                <button onClick={openAdd} className="btn-red text-sm px-5 py-2">Register First Motorcycle</button>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -232,7 +269,7 @@ function DeviceRegistration() {
                   <thead>
                     <tr>
                       <th>Photo</th>
-                      <th>Plate Number</th>
+                      <th>Plate</th>
                       <th>Model</th>
                       <th>Color</th>
                       <th>Device Code</th>
@@ -241,24 +278,18 @@ function DeviceRegistration() {
                   </thead>
                   <tbody>
                     {motorcycles.map((moto) => (
-                      <tr
-                        key={moto.id}
-                        className={selectedMotorcycle?.id === moto.id ? 'ring-inset' : ''}
-                        style={selectedMotorcycle?.id === moto.id ? { outline: '2px solid rgba(99,102,241,0.5)' } : {}}
-                      >
+                      <tr key={moto.id}
+                          style={selectedMotorcycle?.id === moto.id ? { outline: '2px solid rgba(99,102,241,0.5)' } : {}}>
                         <td>
-                          <div
-                            onClick={() => handlePhotoClick(moto.id)}
-                            className="w-11 h-11 rounded-lg flex items-center justify-center cursor-pointer overflow-hidden transition-all hover:opacity-80"
-                            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
-                            title="Click to upload photo"
-                          >
+                          <div onClick={() => handlePhotoClick(moto.id)}
+                               className="w-11 h-11 rounded-lg flex items-center justify-center cursor-pointer overflow-hidden hover:opacity-80 transition-all"
+                               style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+                               title="Click to upload photo">
                             {moto.photoURL ? (
                               <img src={moto.photoURL} alt="Motorcycle" className="w-full h-full object-cover" />
                             ) : (
                               <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                               </svg>
                             )}
@@ -270,14 +301,14 @@ function DeviceRegistration() {
                         <td><span className="badge badge-blue">{moto.deviceCode}</span></td>
                         <td>
                           <div className="flex justify-center gap-1.5">
-                            <button onClick={() => handleEdit(moto)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all hover:opacity-80"
+                            <button onClick={() => openEdit(moto)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
                               style={{ background: 'rgba(99,102,241,0.7)' }}>Edit</button>
-                            <button onClick={() => handleStatus(moto)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all hover:opacity-80"
+                            <button onClick={() => handleSelectStatus(moto)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
                               style={{ background: 'rgba(245,158,11,0.7)' }}>Status</button>
                             <button onClick={() => handleDelete(moto)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all hover:opacity-80"
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
                               style={{ background: 'rgba(239,68,68,0.7)' }}>Delete</button>
                           </div>
                         </td>
@@ -290,6 +321,60 @@ function DeviceRegistration() {
           </div>
         </main>
       </div>
+
+      {/* Add / Edit Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+             onClick={() => setShowModal(false)}>
+          <div className="glass w-full max-w-md" style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}
+               onClick={(e) => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-6 py-4"
+                 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <h2 className="text-white font-bold text-lg">{editingId ? 'Edit Motorcycle' : 'Add Motorcycle'}</h2>
+              <button onClick={() => setShowModal(false)}
+                      className="text-white/40 hover:text-white/80 text-2xl leading-none">&times;</button>
+            </div>
+
+            <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
+              {formError && (
+                <div className="px-4 py-3 rounded-xl text-sm text-red-300 font-medium"
+                     style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.35)' }}>
+                  {formError}
+                </div>
+              )}
+              {[
+                { key: 'plateNumber', placeholder: 'Plate Number', required: true },
+                { key: 'model', placeholder: 'Motorcycle Model', required: true },
+                { key: 'color', placeholder: 'Color', required: true },
+                { key: 'deviceCode', placeholder: 'Device Code', required: true },
+                { key: 'department', placeholder: 'Department (optional)', required: false },
+              ].map(({ key, placeholder, required }) => (
+                <input
+                  key={key}
+                  type="text"
+                  value={formData[key]}
+                  onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                  className="av-input"
+                  placeholder={placeholder}
+                  required={required}
+                />
+              ))}
+              <div className="flex gap-3 pt-1">
+                <button type="submit" disabled={formLoading} className="btn-red flex-1">
+                  {formLoading ? 'Saving…' : editingId ? 'Save Changes' : 'Add Motorcycle'}
+                </button>
+                <button type="button" onClick={() => setShowModal(false)}
+                  className="flex-1 py-3 rounded-xl font-bold text-white/60 hover:text-white transition-all"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
