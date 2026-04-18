@@ -171,10 +171,16 @@ function AdminDashboard() {
             <p className="text-white text-sm font-semibold">{userProfile?.displayName || 'Admin'}</p>
             <p className="text-purple-400 text-xs font-semibold">Administrator</p>
           </div>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
-               style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)', boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }}>
-            {initials}
-          </div>
+          {userProfile?.photoURL ? (
+            <img src={userProfile.photoURL} alt="Profile"
+                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                 style={{ boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }} />
+          ) : (
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
+                 style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)', boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }}>
+              {initials}
+            </div>
+          )}
         </div>
       </header>
 
