@@ -3,6 +3,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { adminApi, userApi } from '../services/api';
+import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmDialog';
+import BottomNav from '../components/BottomNav';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 15;
 
 const Logo = () => (
   <div className="av-logo">
@@ -41,6 +47,12 @@ const SB_ITEMS = [
       <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
     </svg>
   )},
+  { key: 'settings', label: 'System Settings', icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+    </svg>
+  )},
 ];
 
 function StatCard({ title, value, children, accent }) {
@@ -53,6 +65,63 @@ function StatCard({ title, value, children, accent }) {
   );
 }
 
+function AlertTrend({ alerts }) {
+  // Build last-7-days buckets
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return {
+      label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      date: d.toDateString(),
+      count: 0,
+    };
+  });
+
+  alerts.forEach((alert) => {
+    const ts = alert.timestamp?._seconds
+      ? new Date(alert.timestamp._seconds * 1000)
+      : alert.timestamp ? new Date(alert.timestamp) : null;
+    if (!ts) return;
+    const bucket = days.find(d => d.date === ts.toDateString());
+    if (bucket) bucket.count++;
+  });
+
+  const max = Math.max(...days.map(d => d.count), 1);
+  const BAR_H = 80;
+
+  return (
+    <div className="glass p-6">
+      <h3 className="text-white font-bold text-base mb-5">7-Day Alert Trend</h3>
+      <div className="flex items-end gap-3 justify-around" style={{ height: BAR_H + 40 }}>
+        {days.map((d, i) => {
+          const h = Math.max(4, Math.round((d.count / max) * BAR_H));
+          return (
+            <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
+              {d.count > 0 && (
+                <span className="text-white/60 text-[10px] font-bold">{d.count}</span>
+              )}
+              <div
+                style={{
+                  height: h,
+                  width: '100%',
+                  borderRadius: 5,
+                  background: d.count === 0
+                    ? 'rgba(255,255,255,0.07)'
+                    : `linear-gradient(180deg, #ef4444 0%, #dc2626 100%)`,
+                  boxShadow: d.count > 0 ? '0 2px 10px rgba(220,38,38,0.4)' : 'none',
+                  transition: 'height 0.4s ease',
+                  alignSelf: 'flex-end',
+                }}
+              />
+              <span className="text-white/40 text-[10px] font-semibold">{d.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AdminDashboard() {
   const navigate = useNavigate();
   const { currentUser, userProfile, logout, isAdmin } = useAuth();
@@ -61,11 +130,14 @@ function AdminDashboard() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [usersPage, setUsersPage]   = useState(1);
+  const [alertsPage, setAlertsPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [securityForm, setSecurityForm] = useState({ email: '', password: '', displayName: '' });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState(null);
-  const [formSuccess, setFormSuccess] = useState(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (!isAdmin()) { navigate('/'); return; }
@@ -96,38 +168,47 @@ function AdminDashboard() {
   };
 
   const handleUpdateRole = async (userId, newRole) => {
+    // Optimistic update — no full re-fetch needed
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
     try {
       await adminApi.updateUserRole(userId, newRole);
+      toast('User role updated.', 'success');
+    } catch (error) {
+      // Revert on failure
       fetchData();
-      alert('User role updated successfully');
-    } catch (error) { alert('Failed to update role: ' + error.message); }
+      toast('Failed to update role: ' + error.message, 'error');
+    }
   };
 
-  const handleToggleStatus = async (userId, active) => {
+  const handleToggleStatus = async (userId, activate) => {
+    // Optimistic update
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, active: activate } : u));
     try {
-      await adminApi.toggleUserStatus(userId, active);
+      await adminApi.toggleUserStatus(userId, activate);
+      toast(`User ${activate ? 'activated' : 'deactivated'}.`, activate ? 'success' : 'warning');
+    } catch (error) {
       fetchData();
-      alert(`User ${active ? 'activated' : 'deactivated'} successfully`);
-    } catch (error) { alert('Failed to update status: ' + error.message); }
+      toast('Failed to update status: ' + error.message, 'error');
+    }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+    const ok = await confirm('Are you sure you want to delete this user? This cannot be undone.', 'Delete User');
+    if (!ok) return;
     try {
       await adminApi.deleteUser(userId);
       fetchData();
-      alert('User deleted successfully');
-    } catch (error) { alert('Failed to delete user: ' + error.message); }
+      toast('User deleted successfully.', 'info');
+    } catch (error) { toast('Failed to delete user: ' + error.message, 'error'); }
   };
 
   const handleAddSecurity = async (e) => {
     e.preventDefault();
     setFormLoading(true);
     setFormError(null);
-    setFormSuccess(null);
     try {
       await userApi.createWithRole({ ...securityForm, role: 'security' });
-      setFormSuccess('Security personnel added successfully!');
+      toast('Security personnel added successfully!', 'success');
       setSecurityForm({ email: '', password: '', displayName: '' });
       fetchData();
     } catch (error) {
@@ -145,8 +226,17 @@ function AdminDashboard() {
 
   const filteredUsers = users.filter(u =>
     u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
+    u.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.motorcycle?.plateNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.motorcycle?.model?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const usersTotalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const usersSafePage   = Math.min(usersPage, usersTotalPages);
+  const pagedUsers      = filteredUsers.slice((usersSafePage - 1) * PAGE_SIZE, usersSafePage * PAGE_SIZE);
+
+  const alertsTotalPages = Math.max(1, Math.ceil(alerts.length / PAGE_SIZE));
+  const alertsSafePage   = Math.min(alertsPage, alertsTotalPages);
+  const pagedAlerts      = alerts.slice((alertsSafePage - 1) * PAGE_SIZE, alertsSafePage * PAGE_SIZE);
 
   const initials = userProfile?.displayName?.charAt(0)?.toUpperCase() || 'A';
 
@@ -171,23 +261,25 @@ function AdminDashboard() {
             <p className="text-white text-sm font-semibold">{userProfile?.displayName || 'Admin'}</p>
             <p className="text-purple-400 text-xs font-semibold">Administrator</p>
           </div>
-          {userProfile?.photoURL ? (
-            <img src={userProfile.photoURL} alt="Profile"
-                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                 style={{ boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }} />
-          ) : (
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
-                 style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)', boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }}>
-              {initials}
-            </div>
-          )}
+          <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
+            {userProfile?.photoURL ? (
+              <img src={userProfile.photoURL} alt="Profile"
+                   className="w-9 h-9 rounded-full object-cover"
+                   style={{ boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }} />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                   style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)', boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }}>
+                {initials}
+              </div>
+            )}
+          </button>
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
 
-        {/* Sidebar */}
-        <aside className="w-56 flex-shrink-0 p-5 flex flex-col gap-1"
+        {/* Sidebar (desktop only) */}
+        <aside className="hidden md:flex w-56 flex-shrink-0 p-5 flex-col gap-1"
                style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-2 px-2">Admin Panel</p>
           {SB_ITEMS.map(item => (
@@ -206,7 +298,7 @@ function AdminDashboard() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 p-6 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 min-w-0 mobile-pb">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <div className="av-spinner" />
@@ -252,6 +344,7 @@ function AdminDashboard() {
                       { label: 'Add Security', tab: 'addSecurity', color: '#a855f7' },
                       { label: 'View Users', tab: 'users', color: '#6366f1' },
                       { label: 'View Alerts', tab: 'alerts', color: '#22c55e' },
+                      { label: 'System Settings', tab: 'settings', color: '#0891b2' },
                     ].map(({ label, tab, color }) => (
                       <button key={tab} onClick={() => setActiveTab(tab)}
                         className="w-full py-2.5 px-4 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90 hover:-translate-y-px"
@@ -262,6 +355,9 @@ function AdminDashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* 7-day alert trend */}
+              <AlertTrend alerts={alerts} />
             </div>
 
           ) : activeTab === 'addSecurity' ? (
@@ -274,12 +370,6 @@ function AdminDashboard() {
                   <div className="mb-4 px-4 py-3 rounded-xl text-sm text-red-300 font-medium"
                        style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.35)' }}>
                     {formError}
-                  </div>
-                )}
-                {formSuccess && (
-                  <div className="mb-4 px-4 py-3 rounded-xl text-sm text-green-300 font-medium"
-                       style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.35)' }}>
-                    {formSuccess}
                   </div>
                 )}
                 <form onSubmit={handleAddSecurity} className="space-y-4">
@@ -325,7 +415,7 @@ function AdminDashboard() {
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setUsersPage(1); }}
                     placeholder="Search users…"
                     className="av-input pl-9 py-2 text-sm"
                     style={{ width: 220 }}
@@ -339,16 +429,25 @@ function AdminDashboard() {
                     <tr>
                       <th className="text-left">Name</th>
                       <th className="text-left">Email</th>
+                      <th className="text-left">Motorcycle</th>
                       <th className="text-left">Role</th>
                       <th className="text-left">Status</th>
                       <th className="text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredUsers.map((user) => (
+                    {pagedUsers.map((user) => (
                       <tr key={user.id}>
                         <td className="font-semibold text-white">{user.displayName || 'N/A'}</td>
                         <td className="text-white/60 text-sm">{user.email}</td>
+                        <td className="text-white/70 text-sm">
+                          {user.motorcycle ? (
+                            <div>
+                              <p className="font-semibold text-white">{user.motorcycle.plateNumber}</p>
+                              <p className="text-white/40 text-xs">{user.motorcycle.model || 'N/A'}{user.motorcycles?.length > 1 ? ` +${user.motorcycles.length - 1} more` : ''}</p>
+                            </div>
+                          ) : 'None'}
+                        </td>
                         <td>
                           <select
                             value={user.role || 'user'}
@@ -395,9 +494,16 @@ function AdminDashboard() {
                   <p className="text-center text-white/40 py-8 text-sm">No users found</p>
                 )}
               </div>
+              <Pagination
+                page={usersSafePage}
+                totalPages={usersTotalPages}
+                onChange={setUsersPage}
+                pageSize={PAGE_SIZE}
+                total={filteredUsers.length}
+              />
             </div>
 
-          ) : (
+          ) : activeTab === 'alerts' ? (
 
             /* ── Alerts ── */
             <div className="glass h-full p-6 flex flex-col">
@@ -414,7 +520,7 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {alerts.map((alert) => (
+                    {pagedAlerts.map((alert) => (
                       <tr key={alert.id}>
                         <td className="text-white/60 text-xs">{formatDate(alert.timestamp)}</td>
                         <td><span className="badge badge-blue">{alert.deviceId || 'N/A'}</span></td>
@@ -441,10 +547,110 @@ function AdminDashboard() {
                   <p className="text-center text-white/40 py-8 text-sm">No alerts found</p>
                 )}
               </div>
+              <Pagination
+                page={alertsSafePage}
+                totalPages={alertsTotalPages}
+                onChange={setAlertsPage}
+                pageSize={PAGE_SIZE}
+                total={alerts.length}
+              />
+            </div>
+
+          ) : (
+
+            /* ── System Settings ── */
+            <div className="space-y-5">
+              <h2 className="text-white font-bold text-xl">System Settings</h2>
+
+              {/* System info card */}
+              <div className="glass p-6" style={{ borderLeft: '3px solid #a855f7' }}>
+                <p className="text-white/45 text-xs uppercase tracking-widest font-semibold mb-4">System Information</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: 'System Name', value: 'ALERTVIBE' },
+                    { label: 'Institution', value: 'MSU-TCTO' },
+                    { label: 'Location', value: 'Sanga-sanga, Bongao, Tawi-Tawi' },
+                    { label: 'Institute', value: 'Institute of Information Communication Technology' },
+                    { label: 'Microcontroller', value: 'ESP32 DevKit V1' },
+                    { label: 'Vibration Sensor', value: 'SW-420' },
+                    { label: 'Notification Platform', value: 'Firebase Cloud Messaging (FCM)' },
+                    { label: 'Power Supply', value: '12V Motorcycle Battery → LM2596 (5V)' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-xl p-4"
+                         style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">{label}</p>
+                      <p className="text-white font-semibold text-sm">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Vibration thresholds */}
+              <div className="glass p-6" style={{ borderLeft: '3px solid #ef4444' }}>
+                <p className="text-white/45 text-xs uppercase tracking-widest font-semibold mb-4">
+                  Vibration Threshold Configuration
+                </p>
+                <div className="space-y-3">
+                  {[
+                    { level: 'Light', badge: 'badge-green', action: 'Log only — no notification sent', desc: 'Environmental noise: wind, accidental contact' },
+                    { level: 'Moderate', badge: 'badge-yellow', action: 'Push notification → Owner & Security', desc: 'Suspicious: touch, slight movement, tampering' },
+                    { level: 'Strong', badge: 'badge-red', action: 'Immediate push notification via Firebase', desc: 'Critical: forced movement, attempted theft' },
+                  ].map(({ level, badge, action, desc }) => (
+                    <div key={level} className="flex items-center gap-4 p-3 rounded-xl"
+                         style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span className={`badge ${badge} flex-shrink-0`}>{level}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white/80 text-sm font-medium">{action}</p>
+                        <p className="text-white/40 text-xs mt-0.5">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Performance specs */}
+              <div className="glass p-6" style={{ borderLeft: '3px solid #22c55e' }}>
+                <p className="text-white/45 text-xs uppercase tracking-widest font-semibold mb-4">
+                  Performance Requirements
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { label: 'Alert Response Time', value: '1 – 2 seconds', sub: 'From detection to notification delivery' },
+                    { label: 'Concurrent Users', value: 'Up to 100', sub: 'Without notable performance decline' },
+                    { label: 'Connectivity', value: 'Wi-Fi (Campus)', sub: 'MSU-TCTO campus network required' },
+                  ].map(({ label, value, sub }) => (
+                    <div key={label} className="rounded-xl p-4 text-center"
+                         style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-2">{label}</p>
+                      <p className="text-white font-black text-xl mb-1">{value}</p>
+                      <p className="text-white/35 text-xs">{sub}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </main>
       </div>
+
+      {/* Mobile bottom nav — maps sidebar tabs to icons */}
+      <BottomNav
+        activeKey={activeTab}
+        items={[
+          { key: 'dashboard', label: 'Overview', activeColor: '#a855f7',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+            onClick: () => setActiveTab('dashboard') },
+          { key: 'users', label: 'Users', activeColor: '#a855f7',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+            onClick: () => setActiveTab('users') },
+          { key: 'alerts', label: 'Alerts', activeColor: '#a855f7',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+            onClick: () => setActiveTab('alerts') },
+          { key: 'logout', label: 'Logout',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+            onClick: handleLogout },
+        ]}
+      />
     </div>
   );
 }

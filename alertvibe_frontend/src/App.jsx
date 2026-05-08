@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './components/Toast';
+import { ConfirmProvider } from './components/ConfirmDialog';
 import Dashboard from './pages/Dashboard';
 import AlertHistory from './pages/AlertHistory';
 import DeviceRegistration from './pages/DeviceRegistration';
@@ -8,6 +10,7 @@ import SecurityDashboard from './pages/SecurityDashboard';
 import SecurityAlertLog from './pages/SecurityAlertLog';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminSetup from './pages/AdminSetup';
+import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Registration from './pages/Registration';
 import { requestNotificationPermission } from './services/NotificationService';
@@ -77,6 +80,7 @@ function AppContent() {
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/history" element={<ProtectedRoute><AlertHistory /></ProtectedRoute>} />
         <Route path="/devices" element={<ProtectedRoute><DeviceRegistration /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         {/* Security routes */}
         <Route path="/security" element={<ProtectedRoute requiredRole={['security', 'admin']}><SecurityDashboard /></ProtectedRoute>} />
@@ -92,9 +96,13 @@ function AppContent() {
 function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </ConfirmProvider>
+      </ToastProvider>
     </Router>
   );
 }

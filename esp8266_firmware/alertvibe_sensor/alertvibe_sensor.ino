@@ -24,14 +24,22 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
+#include <Preferences.h>
 
 // ─── CONFIGURE THESE ────────────────────────────────────────────────────────
-const char* WIFI_SSID     = "SIGIDAS";
-const char* WIFI_PASSWORD = "Lolipop123";
-const char* BACKEND_URL   = "https://alertvibe-backend.onrender.com/api/alerts";
-const char* DEVICE_ID     = "motorcycle-01";
-const char* LOCATION      = "Motorcycle";
+const char* DEFAULT_SSID     = "SIGIDAS";
+const char* DEFAULT_PASSWORD = "Lolipop123";
+const char* BACKEND_URL      = "https://alertvibe-backend.onrender.com/api/alerts";
+const char* WIFI_CONFIG_URL  = "https://alertvibe-backend.onrender.com/api/motorcycles/wifi/config";
+const char* DEVICE_ID        = "motorcycle-01";
+const char* LOCATION         = "Motorcycle";
 // ────────────────────────────────────────────────────────────────────────────
+
+// Dynamic WiFi credentials (loaded from NVS or defaults)
+char currentSsid[64];
+char currentPassword[64];
+
+Preferences prefs;
 
 // Pin assignments (ESP32 uses direct GPIO numbers)
 #define VIBRATION_PIN   4    // GPIO4  — SW-40 data output (active LOW)
@@ -61,6 +69,74 @@ unsigned long pulseWindowStart  = 0;
 bool          vibrating         = false;
 int           pulseCount        = 0;
 
+// ─── NVS Credential Helpers ───────────────────────────────────────────────────
+void loadCredentials() {
+  prefs.begin("alertvibe", true);
+  String ssid = prefs.getString("wifi_ssid", "");
+  String pass = prefs.getString("wifi_pass", "");
+  prefs.end();
+
+  if (ssid.length() > 0) {
+    ssid.toCharArray(currentSsid, sizeof(currentSsid));
+    pass.toCharArray(currentPassword, sizeof(currentPassword));
+    Serial.println("Loaded WiFi from NVS: " + ssid);
+  } else {
+    strncpy(currentSsid, DEFAULT_SSID, sizeof(currentSsid) - 1);
+    strncpy(currentPassword, DEFAULT_PASSWORD, sizeof(currentPassword) - 1);
+    Serial.println("Using default WiFi credentials");
+  }
+}
+
+void saveCredentials(const String& ssid, const String& pass) {
+  prefs.begin("alertvibe", false);
+  prefs.putString("wifi_ssid", ssid);
+  prefs.putString("wifi_pass", pass);
+  prefs.end();
+  Serial.println("WiFi credentials saved to NVS");
+}
+
+// Simple JSON string extractor — returns value of a quoted key, or "" if null/missing
+String extractJsonString(const String& json, const String& key) {
+  String searchKey = "\"" + key + "\":\"";
+  int start = json.indexOf(searchKey);
+  if (start == -1) return "";
+  start += searchKey.length();
+  int end = json.indexOf("\"", start);
+  if (end == -1) return "";
+  return json.substring(start, end);
+}
+
+// Polls backend for WiFi config; saves and restarts if credentials changed
+void checkWifiConfigUpdate() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+
+  String url = String(WIFI_CONFIG_URL) + "?deviceId=" + String(DEVICE_ID);
+  http.begin(client, url);
+  http.setTimeout(10000);
+
+  int code = http.GET();
+  if (code == 200) {
+    String body = http.getString();
+    String newSsid = extractJsonString(body, "ssid");
+    String newPass = extractJsonString(body, "password");
+
+    if (newSsid.length() > 0 && newSsid != String(currentSsid)) {
+      Serial.println("New WiFi config from backend: " + newSsid);
+      saveCredentials(newSsid, newPass);
+      http.end();
+      delay(500);
+      Serial.println("Restarting to apply new WiFi config...");
+      delay(500);
+      ESP.restart();
+    }
+  }
+  http.end();
+}
+
 // ─── LED Helpers ─────────────────────────────────────────────────────────────
 void allLedsOff() {
   digitalWrite(LED_GREEN,     LOW);
@@ -79,13 +155,13 @@ void setSafeState() {
 // ─── WiFi ─────────────────────────────────────────────────────────────────────
 void connectWiFi() {
   Serial.print("Connecting to WiFi: ");
-  Serial.println(WIFI_SSID);
+  Serial.println(currentSsid);
 
   allLedsOff();
   digitalWrite(LED_BLUE_SAFE, HIGH);   // Device is alive
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(currentSsid, currentPassword);
 
   unsigned long start = millis();
   bool blink = false;
@@ -203,7 +279,9 @@ void setup() {
 
   pinMode(VIBRATION_PIN, INPUT);
 
+  loadCredentials();
   connectWiFi();
+  checkWifiConfigUpdate();  // Apply any pending config change from dashboard
 
   Serial.println("Monitoring for vibration...");
   Serial.print("LOW  threshold : "); Serial.print(LOW_THRESHOLD);  Serial.println(" pulses");
@@ -282,6 +360,13 @@ void loop() {
     Serial.println(pulseCount);
     pulseCount = 0;
     setSafeState();
+  }
+
+  // ── Poll backend for WiFi config updates every 5 minutes ─────────────────
+  static unsigned long lastConfigCheck = 0;
+  if (now - lastConfigCheck > 300000UL) {
+    lastConfigCheck = now;
+    checkWifiConfigUpdate();
   }
 
   delay(5);
