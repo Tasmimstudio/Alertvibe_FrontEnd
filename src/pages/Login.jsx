@@ -240,16 +240,6 @@ function Login() {
       {/* ── LEFT — Branding (desktop only) ─────────── */}
       <div className="hidden lg:flex w-[44%] flex-shrink-0 flex-col relative overflow-hidden">
 
-        {/* Motorcycle silhouette */}
-        <div className="absolute inset-0 pointer-events-none"
-             style={{
-               backgroundImage: 'url(/login-bg.png)',
-               backgroundSize: 'contain',
-               backgroundRepeat: 'no-repeat',
-               backgroundPosition: 'center 55%',
-               opacity: 0.10,
-             }}/>
-
         {/* Deep maroon gradient */}
         <div className="absolute inset-0 pointer-events-none"
              style={{ background: 'linear-gradient(160deg, #0c0202 0%, #180404 50%, #0f0303 100%)' }}/>
@@ -331,9 +321,22 @@ function Login() {
 
       {/* ── RIGHT — Form ────────────────────────────── */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 overflow-y-auto relative login-scroll"
-           style={{ background: 'linear-gradient(160deg, #0d1b2a 0%, #0c1628 55%, #0a1020 100%)' }}>
+           style={{ background: '#080810' }}>
 
-        <div className="absolute inset-0 pointer-events-none av-grid-bg opacity-50"/>
+        {/* Motorcycle photo background */}
+        <div className="absolute inset-0 pointer-events-none"
+             style={{
+               backgroundImage: 'url(/login-bg.png)',
+               backgroundSize: 'contain',
+               backgroundRepeat: 'no-repeat',
+               backgroundPosition: 'center 52%',
+             }}/>
+
+        {/* Dark overlay so form text stays readable */}
+        <div className="absolute inset-0 pointer-events-none"
+             style={{ background: 'linear-gradient(160deg, rgba(8,8,20,0.82) 0%, rgba(10,10,24,0.78) 100%)' }}/>
+
+        <div className="absolute inset-0 pointer-events-none av-grid-bg opacity-30"/>
 
         {/* Mobile branding */}
         <div className="lg:hidden flex flex-col items-center mb-8 relative z-10">
