@@ -261,6 +261,13 @@ export const motorcycleApi = {
     return apiRequest(`/motorcycles/search?plateNumber=${encodeURIComponent(plateNumber)}`);
   },
 
+  updateParkingNote: async (id, note) => {
+    return apiRequest(`/motorcycles/${id}/note`, {
+      method: 'PUT',
+      body: JSON.stringify({ note }),
+    });
+  },
+
   updateWifi: async (id, { ssid, password }) => {
     return apiRequest(`/motorcycles/${id}/wifi`, {
       method: 'PUT',
