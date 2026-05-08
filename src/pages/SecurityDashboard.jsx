@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { securityApi } from '../services/api';
+import BottomNav from '../components/BottomNav';
 
 const Logo = () => (
   <div className="av-logo">
@@ -25,8 +26,19 @@ function SecurityDashboard() {
   const [motorcycles, setMotorcycles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
+  const [unrespondedCount, setUnrespondedCount] = useState(0);
 
-  useEffect(() => { fetchMotorcycles(); }, []);
+  useEffect(() => { fetchMotorcycles(); fetchUnrespondedCount(); }, []);
+
+  const fetchUnrespondedCount = async () => {
+    try {
+      const data = await securityApi.getAlerts();
+      const count = (data.alerts || []).filter(a => !a.responded).length;
+      setUnrespondedCount(count);
+    } catch (error) {
+      console.error('Error fetching alert count:', error);
+    }
+  };
 
   const fetchMotorcycles = async () => {
     setLoading(true);
@@ -45,6 +57,7 @@ function SecurityDashboard() {
         ownerEmail: m.ownerEmail || null,
         status: m.status || 'active',
         isActivated: m.isActivated !== false,
+        parkingLocation: m.parkingLocation || null,
         createdAt: m.createdAt || null,
       })));
     } catch (error) {
@@ -96,23 +109,25 @@ function SecurityDashboard() {
             <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
             <p className="text-amber-400 text-xs font-semibold">Security</p>
           </div>
-          {userProfile?.photoURL ? (
-            <img src={userProfile.photoURL} alt="Profile"
-                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                 style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
-          ) : (
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
-                 style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
-              {initials}
-            </div>
-          )}
+          <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
+            {userProfile?.photoURL ? (
+              <img src={userProfile.photoURL} alt="Profile"
+                   className="w-9 h-9 rounded-full object-cover"
+                   style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                   style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
+                {initials}
+              </div>
+            )}
+          </button>
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
 
-        {/* Sidebar */}
-        <aside className="w-56 flex-shrink-0 p-5 flex flex-col gap-1"
+        {/* Sidebar (desktop only) */}
+        <aside className="hidden md:flex w-56 flex-shrink-0 p-5 flex-col gap-1"
                style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-2 px-2">Security Panel</p>
           <button onClick={() => navigate('/security')} className="sb-btn sb-active">
@@ -127,6 +142,11 @@ function SecurityDashboard() {
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
             </svg>
             Alert Responses
+            {unrespondedCount > 0 && (
+              <span className="ml-auto badge badge-red" style={{ fontSize: 10, padding: '2px 7px' }}>
+                {unrespondedCount > 9 ? '9+' : unrespondedCount}
+              </span>
+            )}
           </button>
           <div className="flex-1" />
           <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', margin: '8px 0' }} />
@@ -134,7 +154,7 @@ function SecurityDashboard() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 p-6 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 min-w-0 mobile-pb">
           <div className="glass h-full p-6 flex flex-col gap-5">
 
             {/* Search */}
@@ -226,6 +246,22 @@ function SecurityDashboard() {
         </main>
       </div>
 
+      {/* Mobile bottom nav */}
+      <BottomNav
+        activeKey="bikes"
+        items={[
+          { key: 'bikes',  label: 'Motorcycles', activeColor: '#f59e0b',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h-3l-2 5.5M5.5 14L8 8.5h5.5L16 14"/></svg>,
+            onClick: () => navigate('/security') },
+          { key: 'alerts', label: 'Alerts', badge: unrespondedCount, activeColor: '#f59e0b',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+            onClick: () => navigate('/security/alerts') },
+          { key: 'logout', label: 'Logout',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+            onClick: handleLogout },
+        ]}
+      />
+
       {/* Detail Modal */}
       {selectedMotorcycle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -273,6 +309,7 @@ function SecurityDashboard() {
                   { label: 'Color', value: selectedMotorcycle.color },
                   { label: 'Device Code', value: selectedMotorcycle.deviceCode },
                   { label: 'Department', value: selectedMotorcycle.department || 'N/A' },
+                  ...(selectedMotorcycle.parkingLocation ? [{ label: 'Parking Location', value: selectedMotorcycle.parkingLocation }] : []),
                   { label: 'Registered', value: formatDate(selectedMotorcycle.createdAt), span: 2 },
                 ].map(({ label, value, span }) => (
                   <div key={label} className={`rounded-xl p-3 ${span === 2 ? 'col-span-2' : ''}`}

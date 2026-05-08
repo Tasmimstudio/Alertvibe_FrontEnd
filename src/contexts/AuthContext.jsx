@@ -2,9 +2,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
+  updateProfile as updateFirebaseProfile,
 } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import { userApi } from '../services/api';
@@ -53,7 +56,13 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         // Backend unreachable — use a minimal fallback so the app can still navigate
-        const fallback = { uid: user.uid, email: user.email, role: 'user' };
+        const fallback = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || null,
+          photoURL: user.photoURL || null,
+          role: 'user',
+        };
         setUserProfile(fallback);
         return fallback;
       }
@@ -65,19 +74,30 @@ export const AuthProvider = ({ children }) => {
   const ensureDefaultAdmin = async () => {};
 
   // Sign up with email and password
-  const signup = async (email, password, displayName) => {
+  const signup = async (email, password, displayName, phoneNumber) => {
     try {
       setError(null);
       const result = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Create user profile in backend (non-blocking — backend may be cold-starting)
-      userApi.createProfile({
+      if (displayName) {
+        await updateFirebaseProfile(result.user, { displayName });
+      }
+
+      const profileData = {
         uid: result.user.uid,
         email: result.user.email,
         displayName: displayName || null,
-      }).catch((err) => {
-        console.warn('Profile creation failed (will retry on next login):', err.message);
-      });
+        phoneNumber: phoneNumber || null,
+        photoURL: result.user.photoURL || null,
+      };
+
+      try {
+        const createdProfile = await userApi.createProfile(profileData);
+        setUserProfile(createdProfile.user || profileData);
+      } catch (profileErr) {
+        console.warn('Profile creation failed (will retry on next login):', profileErr.message);
+        setUserProfile({ ...profileData, role: 'user' });
+      }
 
       return result;
     } catch (err) {

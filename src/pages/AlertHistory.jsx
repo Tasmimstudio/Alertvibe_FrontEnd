@@ -3,6 +3,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { alertApi } from '../services/api';
+import BottomNav from '../components/BottomNav';
+import Pagination from '../components/Pagination';
+import { formatDate } from '../utils/formatDate';
+
+const PAGE_SIZE = 15;
 
 const Logo = () => (
   <div className="av-logo">
@@ -41,6 +46,7 @@ const AlertHistory = () => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => { fetchAlerts(); }, []);
 
@@ -48,19 +54,15 @@ const AlertHistory = () => {
     setLoading(true);
     try {
       const data = await alertApi.listAlerts();
-      const formattedAlerts = (Array.isArray(data) ? data : []).map(alert => {
-        const ts = alert.timestamp?._seconds
-          ? new Date(alert.timestamp._seconds * 1000)
-          : alert.timestamp ? new Date(alert.timestamp) : new Date();
-        return {
-          id: alert.id,
-          date: ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase(),
-          time: ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-          motorcycle: alert.deviceId || 'Unknown',
-          message: alert.message || 'VIBRATION DETECTED',
-          isRead: alert.responded || false,
-        };
-      });
+      const formattedAlerts = (Array.isArray(data) ? data : []).map(alert => ({
+        id: alert.id,
+        date: formatDate(alert.timestamp, 'date'),
+        time: formatDate(alert.timestamp, 'time'),
+        motorcycle: alert.deviceId || 'Unknown',
+        message: alert.message || 'VIBRATION DETECTED',
+        isRead: alert.responded || false,
+        _raw: alert.timestamp,
+      }));
       setAlerts(formattedAlerts);
     } catch (error) {
       console.error('Error fetching alerts:', error);
@@ -85,10 +87,16 @@ const AlertHistory = () => {
     a.date.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paged      = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleSearch = (q) => { setSearchQuery(q); setPage(1); };
+
   const initials = userProfile?.displayName?.charAt(0)?.toUpperCase() || 'U';
 
   return (
-    <div className="av-bg av-grid-bg min-h-screen flex flex-col">
+    <div className="av-bg av-grid-bg h-screen overflow-hidden flex flex-col" style={{ minHeight: '100dvh' }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-4"
@@ -114,7 +122,7 @@ const AlertHistory = () => {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search alerts…"
               className="av-input pl-9 py-2 text-sm"
               style={{ width: 220 }}
@@ -124,23 +132,25 @@ const AlertHistory = () => {
             <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'User'}</p>
             <p className="text-white/40 text-xs capitalize">{userProfile?.role || 'user'}</p>
           </div>
-          {userProfile?.photoURL ? (
-            <img src={userProfile.photoURL} alt="Profile"
-                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                 style={{ boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }} />
-          ) : (
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
-                 style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
-              {initials}
-            </div>
-          )}
+          <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
+            {userProfile?.photoURL ? (
+              <img src={userProfile.photoURL} alt="Profile"
+                   className="w-9 h-9 rounded-full object-cover"
+                   style={{ boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }} />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                   style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
+                {initials}
+              </div>
+            )}
+          </button>
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
 
-        {/* Sidebar */}
-        <aside className="w-56 flex-shrink-0 p-5 flex flex-col gap-1"
+        {/* Sidebar (desktop only) */}
+        <aside className="hidden md:flex w-56 flex-shrink-0 p-5 flex-col gap-1"
                style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-2 px-2">Navigation</p>
           <button onClick={() => navigate('/')} className="sb-btn"><HomeIcon /> Home</button>
@@ -152,13 +162,13 @@ const AlertHistory = () => {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 p-6 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 min-w-0 mobile-pb overflow-y-auto">
           <div className="glass h-full overflow-hidden">
             {/* Table header */}
             <div className="flex items-center justify-between px-6 py-4"
                  style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
               <h2 className="text-white font-bold text-lg">Alert Log</h2>
-              <span className="badge badge-red">{filtered.length} alerts</span>
+              <span className="badge badge-blue">{filtered.length} alert{filtered.length !== 1 ? 's' : ''}</span>
             </div>
 
             {loading ? (
@@ -186,7 +196,7 @@ const AlertHistory = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((alert) => (
+                    {paged.map((alert) => (
                       <tr key={alert.id}>
                         <td className="font-semibold">{alert.date}</td>
                         <td className="text-white/60">{alert.time}</td>
@@ -213,9 +223,27 @@ const AlertHistory = () => {
                 </table>
               </div>
             )}
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onChange={setPage}
+              pageSize={PAGE_SIZE}
+              total={filtered.length}
+            />
           </div>
         </main>
       </div>
+
+      <BottomNav
+        activeKey="alerts"
+        items={[
+          { key: 'home',   label: 'Home',        icon: <HomeIcon />, onClick: () => navigate('/') },
+          { key: 'bikes',  label: 'Motorcycles',  icon: <BikeIcon />, onClick: () => navigate('/devices') },
+          { key: 'alerts', label: 'Alerts',        icon: <BellIcon />, onClick: () => navigate('/history') },
+          { key: 'logout', label: 'Logout', onClick: handleLogout,
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> },
+        ]}
+      />
     </div>
   );
 };

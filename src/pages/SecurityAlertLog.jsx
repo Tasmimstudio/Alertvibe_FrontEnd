@@ -3,6 +3,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { securityApi } from '../services/api';
+import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmDialog';
+import BottomNav from '../components/BottomNav';
+import Pagination from '../components/Pagination';
+import { formatDate } from '../utils/formatDate';
+
+const PAGE_SIZE = 15;
 
 const Logo = () => (
   <div className="av-logo">
@@ -38,9 +45,12 @@ function SecurityAlertLog() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [responseNotes, setResponseNotes] = useState('');
   const [responding, setResponding] = useState(false);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => { fetchData(); }, []);
 
@@ -66,22 +76,19 @@ function SecurityAlertLog() {
         const ts = alert.timestamp?._seconds
           ? new Date(alert.timestamp._seconds * 1000)
           : alert.timestamp ? new Date(alert.timestamp) : new Date();
-        const respondedAt = alert.respondedAt?._seconds
-          ? new Date(alert.respondedAt._seconds * 1000)
-          : alert.respondedAt ? new Date(alert.respondedAt) : null;
         const ownerInfo = deviceMap[alert.deviceId] || {};
         return {
           id: alert.id,
-          date: ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase(),
-          time: ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+          date: formatDate(alert.timestamp, 'date'),
+          time: formatDate(alert.timestamp, 'time'),
           timestamp: ts,
           motorcycle: alert.deviceId || 'Unknown',
           message: alert.message || 'VIBRATION DETECTED',
           severity: alert.severity || 'medium',
           isResponded: alert.responded || false,
           respondedBy: alert.respondedBy || null,
-          respondedAt: respondedAt
-            ? respondedAt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+          respondedAt: alert.respondedAt
+            ? formatDate(alert.respondedAt, 'datetime')
             : null,
           notes: alert.notes || '',
           ownerName: ownerInfo.ownerName || 'Unknown',
@@ -115,8 +122,9 @@ function SecurityAlertLog() {
 
   const handleToggleResponded = async (markAs) => {
     if (!selectedAlert) return;
-    const action = markAs ? 'MARK this alert as RESPONDED' : 'UNDO response';
-    if (!window.confirm(`Are you sure you want to ${action}?`)) return;
+    const action = markAs ? 'Mark this alert as responded?' : 'Undo this response?';
+    const ok = await confirm(action, markAs ? 'Mark Responded' : 'Undo');
+    if (!ok) return;
     setResponding(true);
     try {
       await securityApi.respondToAlert(selectedAlert.id, {
@@ -130,16 +138,15 @@ function SecurityAlertLog() {
               ...a,
               isResponded: markAs,
               respondedBy: markAs ? (currentUser?.displayName || currentUser?.email || 'Security Guard') : null,
-              respondedAt: markAs
-                ? new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
-                : null,
+              respondedAt: markAs ? formatDate(new Date(), 'datetime') : null,
               notes: markAs ? responseNotes : '',
             }
           : a
       ));
+      toast(markAs ? 'Alert marked as responded.' : 'Response undone.', markAs ? 'success' : 'info');
       handleCloseModal();
     } catch (error) {
-      window.alert('Failed to update alert: ' + error.message);
+      toast('Failed to update alert: ' + error.message, 'error');
     } finally {
       setResponding(false);
     }
@@ -164,10 +171,17 @@ function SecurityAlertLog() {
       return b.timestamp - a.timestamp;
     });
 
+  const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pagedAlerts = filteredAlerts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const handleFilterChange = (f) => { setFilter(f); setPage(1); };
+  const handleSearchChange = (q) => { setSearchPlate(q); setPage(1); };
+
   const initials = userProfile?.displayName?.charAt(0)?.toUpperCase() || currentUser?.displayName?.charAt(0)?.toUpperCase() || 'S';
 
   return (
-    <div className="av-bg av-grid-bg min-h-screen flex flex-col">
+    <div className="av-bg av-grid-bg h-screen overflow-hidden flex flex-col" style={{ minHeight: '100dvh' }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-4"
@@ -187,23 +201,25 @@ function SecurityAlertLog() {
             <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
             <p className="text-amber-400 text-xs font-semibold">Security</p>
           </div>
-          {userProfile?.photoURL ? (
-            <img src={userProfile.photoURL} alt="Profile"
-                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                 style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
-          ) : (
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
-                 style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
-              {initials}
-            </div>
-          )}
+          <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
+            {userProfile?.photoURL ? (
+              <img src={userProfile.photoURL} alt="Profile"
+                   className="w-9 h-9 rounded-full object-cover"
+                   style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                   style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
+                {initials}
+              </div>
+            )}
+          </button>
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
 
-        {/* Sidebar */}
-        <aside className="w-56 flex-shrink-0 p-5 flex flex-col gap-1"
+        {/* Sidebar (desktop only) */}
+        <aside className="hidden md:flex w-56 flex-shrink-0 p-5 flex-col gap-1"
                style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-2 px-2">Security Panel</p>
           <button onClick={() => navigate('/security')} className="sb-btn">
@@ -218,6 +234,11 @@ function SecurityAlertLog() {
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
             </svg>
             Alert Responses
+            {unrespondedCount > 0 && (
+              <span className="ml-auto badge badge-red" style={{ fontSize: 10, padding: '2px 7px' }}>
+                {unrespondedCount > 9 ? '9+' : unrespondedCount}
+              </span>
+            )}
           </button>
           <div className="flex-1" />
           <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', margin: '8px 0' }} />
@@ -225,7 +246,7 @@ function SecurityAlertLog() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 p-6 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 min-w-0 mobile-pb overflow-y-auto">
           <div className="glass h-full p-6 flex flex-col gap-5">
 
             {/* Controls */}
@@ -240,7 +261,7 @@ function SecurityAlertLog() {
                 <input
                   type="text"
                   value={searchPlate}
-                  onChange={(e) => setSearchPlate(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search by device ID or plate…"
                   className="av-input pl-9"
                 />
@@ -255,7 +276,7 @@ function SecurityAlertLog() {
                 ].map(f => (
                   <button
                     key={f.key}
-                    onClick={() => setFilter(f.key)}
+                    onClick={() => handleFilterChange(f.key)}
                     className={`tab-pill flex items-center gap-1.5 py-2 ${filter === f.key ? 'tab-active' : ''}`}
                   >
                     {f.label}
@@ -276,8 +297,14 @@ function SecurityAlertLog() {
               </div>
             ) : filteredAlerts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <span className="text-5xl">✅</span>
-                <p className="text-white/50 text-sm">No alerts found.</p>
+                <span className="text-5xl">{searchPlate || filter !== 'all' ? '🔍' : '✅'}</span>
+                <p className="text-white/50 text-sm">
+                  {searchPlate
+                    ? `No alerts matching "${searchPlate}".`
+                    : filter !== 'all'
+                      ? `No ${filter} alerts.`
+                      : 'No alerts found. All clear!'}
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -295,7 +322,7 @@ function SecurityAlertLog() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAlerts.map((alertItem) => (
+                    {pagedAlerts.map((alertItem) => (
                       <tr key={alertItem.id} className="cursor-pointer"
                           onClick={() => handleRowClick(alertItem)}
                           style={!alertItem.isResponded ? { borderLeft: '3px solid rgba(239,68,68,0.5)' } : {}}>
@@ -324,9 +351,32 @@ function SecurityAlertLog() {
                 </table>
               </div>
             )}
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              onChange={setPage}
+              pageSize={PAGE_SIZE}
+              total={filteredAlerts.length}
+            />
           </div>
         </main>
       </div>
+
+      {/* Mobile bottom nav */}
+      <BottomNav
+        activeKey="alerts"
+        items={[
+          { key: 'bikes',  label: 'Motorcycles', activeColor: '#f59e0b',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h-3l-2 5.5M5.5 14L8 8.5h5.5L16 14"/></svg>,
+            onClick: () => navigate('/security') },
+          { key: 'alerts', label: 'Alerts', badge: unrespondedCount, activeColor: '#f59e0b',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+            onClick: () => navigate('/security/alerts') },
+          { key: 'logout', label: 'Logout',
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+            onClick: handleLogout },
+        ]}
+      />
 
       {/* Alert Modal */}
       {selectedAlert && (

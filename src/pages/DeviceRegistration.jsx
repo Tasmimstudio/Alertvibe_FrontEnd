@@ -3,6 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motorcycleApi } from '../services/api';
+import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmDialog';
+import BottomNav from '../components/BottomNav';
 
 const Logo = () => (
   <div className="av-logo">
@@ -34,17 +37,23 @@ const LogoutIcon = () => (
   </svg>
 );
 
-const EMPTY_FORM = { plateNumber: '', model: '', color: '', deviceCode: '', department: '' };
+const EMPTY_FORM = { plateNumber: '', model: '', color: '', deviceCode: '', department: '', parkingLocation: '' };
+const pendingMotorcycleKey = (uid) => `alertvibe:pendingMotorcycle:${uid}`;
 
 function DeviceRegistration() {
   const navigate = useNavigate();
   const { currentUser, userProfile, logout } = useAuth();
   const [motorcycles, setMotorcycles] = useState([]);
+  const [motorcycleModels, setMotorcycleModels] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
   const [isActivated, setIsActivated] = useState(true);
   const [uploadingPhotoId, setUploadingPhotoId] = useState(null);
   const photoInputRef = useRef(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -53,12 +62,36 @@ function DeviceRegistration() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState(null);
 
-  useEffect(() => { fetchMotorcycles(); }, [currentUser]);
+  useEffect(() => {
+    fetchMotorcycles();
+    fetchMotorcycleModels();
+  }, [currentUser]);
+
+  const fetchMotorcycleModels = async () => {
+    setModelsLoading(true);
+    setModelsError(null);
+    try {
+      const data = await motorcycleApi.listModels();
+      setMotorcycleModels(data.models || []);
+    } catch (error) {
+      console.error('Error fetching motorcycle models:', error);
+      setModelsError('Motorcycle model list is unavailable. Restart the backend and try again.');
+      setMotorcycleModels([]);
+    } finally {
+      setModelsLoading(false);
+    }
+  };
 
   const fetchMotorcycles = async () => {
     if (!currentUser) return;
     setLoading(true);
     try {
+      const pendingMotorcycle = localStorage.getItem(pendingMotorcycleKey(currentUser.uid));
+      if (pendingMotorcycle) {
+        await motorcycleApi.register(JSON.parse(pendingMotorcycle));
+        localStorage.removeItem(pendingMotorcycleKey(currentUser.uid));
+      }
+
       const data = await motorcycleApi.list({ ownerId: currentUser.uid });
       const list = data.motorcycles || [];
       setMotorcycles(list);
@@ -94,6 +127,7 @@ function DeviceRegistration() {
       color: moto.color || '',
       deviceCode: moto.deviceCode || '',
       department: moto.department || '',
+      parkingLocation: moto.parkingLocation || '',
     });
     setFormError(null);
     setShowModal(true);
@@ -101,7 +135,7 @@ function DeviceRegistration() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    const { plateNumber, model, color, deviceCode, department } = formData;
+    const { plateNumber, model, color, deviceCode, department, parkingLocation } = formData;
     if (!plateNumber || !model || !color || !deviceCode) {
       setFormError('Plate number, model, color and device code are required.');
       return;
@@ -110,10 +144,10 @@ function DeviceRegistration() {
     setFormError(null);
     try {
       if (editingId) {
-        await motorcycleApi.update(editingId, { plateNumber, model, color, deviceCode, department });
+        await motorcycleApi.update(editingId, { plateNumber, model, color, deviceCode, department, parkingLocation });
       } else {
         await motorcycleApi.register({
-          plateNumber, model, color, deviceCode, department,
+          plateNumber, model, color, deviceCode, department, parkingLocation,
           ownerId: currentUser.uid,
           ownerName: userProfile?.displayName || currentUser.email,
         });
@@ -133,7 +167,8 @@ function DeviceRegistration() {
       await motorcycleApi.toggleActivation(selectedMotorcycle.id, true);
       setIsActivated(true);
       fetchMotorcycles();
-    } catch (error) { alert('Failed to activate: ' + error.message); }
+      toast('Monitoring activated successfully.', 'success');
+    } catch (error) { toast('Failed to activate: ' + error.message, 'error'); }
   };
 
   const handleDeactivate = async () => {
@@ -142,16 +177,19 @@ function DeviceRegistration() {
       await motorcycleApi.toggleActivation(selectedMotorcycle.id, false);
       setIsActivated(false);
       fetchMotorcycles();
-    } catch (error) { alert('Failed to deactivate: ' + error.message); }
+      toast('Monitoring deactivated.', 'warning');
+    } catch (error) { toast('Failed to deactivate: ' + error.message, 'error'); }
   };
 
   const handleDelete = async (moto) => {
-    if (!confirm(`Delete motorcycle ${moto.plateNumber}?`)) return;
+    const ok = await confirm(`Delete motorcycle ${moto.plateNumber}? This cannot be undone.`, 'Delete');
+    if (!ok) return;
     try {
       await motorcycleApi.delete(moto.id);
       if (selectedMotorcycle?.id === moto.id) setSelectedMotorcycle(null);
       fetchMotorcycles();
-    } catch (error) { alert('Failed to delete: ' + error.message); }
+      toast(`Motorcycle ${moto.plateNumber} deleted.`, 'info');
+    } catch (error) { toast('Failed to delete: ' + error.message, 'error'); }
   };
 
   const handleSelectStatus = (moto) => {
@@ -167,11 +205,12 @@ function DeviceRegistration() {
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !uploadingPhotoId) return;
-    if (file.size > 5 * 1024 * 1024) { alert('Photo must be less than 5MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast('Photo must be less than 5MB.', 'warning'); return; }
     try {
       await motorcycleApi.uploadPhoto(uploadingPhotoId, file);
       fetchMotorcycles();
-    } catch (error) { alert('Failed to upload photo: ' + error.message); }
+      toast('Photo updated successfully.', 'success');
+    } catch (error) { toast('Failed to upload photo: ' + error.message, 'error'); }
     finally { setUploadingPhotoId(null); e.target.value = ''; }
   };
 
@@ -199,23 +238,25 @@ function DeviceRegistration() {
             <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'User'}</p>
             <p className="text-white/40 text-xs capitalize">{userProfile?.role || 'user'}</p>
           </div>
-          {userProfile?.photoURL ? (
-            <img src={userProfile.photoURL} alt="Profile"
-                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                 style={{ boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }} />
-          ) : (
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
-                 style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
-              {initials}
-            </div>
-          )}
+          <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
+            {userProfile?.photoURL ? (
+              <img src={userProfile.photoURL} alt="Profile"
+                   className="w-9 h-9 rounded-full object-cover"
+                   style={{ boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }} />
+            ) : (
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                   style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
+                {initials}
+              </div>
+            )}
+          </button>
         </div>
       </header>
 
       <div className="flex flex-1">
 
-        {/* Sidebar */}
-        <aside className="w-56 flex-shrink-0 p-5 flex flex-col gap-1"
+        {/* Sidebar (desktop only) */}
+        <aside className="hidden md:flex w-56 flex-shrink-0 p-5 flex-col gap-1"
                style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest mb-2 px-2">Navigation</p>
           <button onClick={() => navigate('/')} className="sb-btn"><HomeIcon /> Home</button>
@@ -227,7 +268,7 @@ function DeviceRegistration() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 p-6 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 min-w-0 mobile-pb">
           <div className="glass h-full p-6 flex flex-col gap-5">
 
             {/* Page title */}
@@ -285,6 +326,7 @@ function DeviceRegistration() {
                       <th>Model</th>
                       <th>Color</th>
                       <th>Device Code</th>
+                      <th>Parking Location</th>
                       <th className="text-center">Actions</th>
                     </tr>
                   </thead>
@@ -311,6 +353,7 @@ function DeviceRegistration() {
                         <td>{moto.model}</td>
                         <td>{moto.color}</td>
                         <td><span className="badge badge-blue">{moto.deviceCode}</span></td>
+                        <td className="text-white/60 text-sm">{moto.parkingLocation || <span className="text-white/25">—</span>}</td>
                         <td>
                           <div className="flex justify-center gap-1.5">
                             <button onClick={() => openEdit(moto)}
@@ -334,6 +377,18 @@ function DeviceRegistration() {
         </main>
       </div>
 
+      {/* Mobile bottom nav */}
+      <BottomNav
+        activeKey="bikes"
+        items={[
+          { key: 'home',   label: 'Home',        icon: <HomeIcon />, onClick: () => navigate('/') },
+          { key: 'bikes',  label: 'Motorcycles',  icon: <BikeIcon />, onClick: () => navigate('/devices') },
+          { key: 'alerts', label: 'Alerts',        icon: <BellIcon />, onClick: () => navigate('/history') },
+          { key: 'logout', label: 'Logout', onClick: handleLogout,
+            icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> },
+        ]}
+      />
+
       {/* Add / Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -356,12 +411,38 @@ function DeviceRegistration() {
                   {formError}
                 </div>
               )}
+              <input
+                type="text"
+                value={formData.plateNumber}
+                onChange={(e) => setFormData({ ...formData, plateNumber: e.target.value })}
+                className="av-input"
+                placeholder="Plate Number"
+                required
+              />
+              <select
+                value={formData.model}
+                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                className="av-input"
+                disabled={modelsLoading || !!modelsError}
+                required
+              >
+                <option value="" style={{ background: '#1e293b' }}>
+                  {modelsLoading ? 'Loading motorcycle models...' : 'Select Motorcycle Model'}
+                </option>
+                {motorcycleModels.map((model) => (
+                  <option key={model} value={model} style={{ background: '#1e293b' }}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+              {modelsError && (
+                <p className="text-red-300 text-xs -mt-2">{modelsError}</p>
+              )}
               {[
-                { key: 'plateNumber', placeholder: 'Plate Number', required: true },
-                { key: 'model', placeholder: 'Motorcycle Model', required: true },
                 { key: 'color', placeholder: 'Color', required: true },
                 { key: 'deviceCode', placeholder: 'Device Code', required: true },
                 { key: 'department', placeholder: 'Department (optional)', required: false },
+                { key: 'parkingLocation', placeholder: 'Parking Location (optional)', required: false },
               ].map(({ key, placeholder, required }) => (
                 <input
                   key={key}

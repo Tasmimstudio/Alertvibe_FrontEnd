@@ -172,6 +172,10 @@ export const securityApi = {
 
 // Motorcycle API
 export const motorcycleApi = {
+  listModels: async () => {
+    return apiRequest('/motorcycles/models');
+  },
+
   register: async (motorcycleData) => {
     return apiRequest('/motorcycles', {
       method: 'POST',
@@ -235,6 +239,13 @@ export const motorcycleApi = {
 
   searchByPlate: async (plateNumber) => {
     return apiRequest(`/motorcycles/search?plateNumber=${encodeURIComponent(plateNumber)}`);
+  },
+
+  updateWifi: async (id, { ssid, password }) => {
+    return apiRequest(`/motorcycles/${id}/wifi`, {
+      method: 'PUT',
+      body: JSON.stringify({ ssid, password }),
+    });
   },
 };
 
