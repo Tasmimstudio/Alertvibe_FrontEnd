@@ -37,7 +37,7 @@ const LogoutIcon = () => (
   </svg>
 );
 
-const EMPTY_FORM = { plateNumber: '', model: '', color: '', deviceCode: '', department: '', parkingLocation: '' };
+const EMPTY_FORM = { plateNumber: '', model: '', color: '', deviceCode: '', department: '' };
 const pendingMotorcycleKey = (uid) => `alertvibe:pendingMotorcycle:${uid}`;
 
 function DeviceRegistration() {
@@ -51,6 +51,8 @@ function DeviceRegistration() {
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
   const [isActivated, setIsActivated] = useState(true);
   const [uploadingPhotoId, setUploadingPhotoId] = useState(null);
+  const [parkingNote, setParkingNote] = useState('');
+  const [parkingNoteUpdating, setParkingNoteUpdating] = useState(false);
   const photoInputRef = useRef(null);
   const toast = useToast();
   const confirm = useConfirm();
@@ -127,7 +129,6 @@ function DeviceRegistration() {
       color: moto.color || '',
       deviceCode: moto.deviceCode || '',
       department: moto.department || '',
-      parkingLocation: moto.parkingLocation || '',
     });
     setFormError(null);
     setShowModal(true);
@@ -135,7 +136,7 @@ function DeviceRegistration() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    const { plateNumber, model, color, deviceCode, department, parkingLocation } = formData;
+    const { plateNumber, model, color, deviceCode, department } = formData;
     if (!plateNumber || !model || !color || !deviceCode) {
       setFormError('Plate number, model, color and device code are required.');
       return;
@@ -144,10 +145,10 @@ function DeviceRegistration() {
     setFormError(null);
     try {
       if (editingId) {
-        await motorcycleApi.update(editingId, { plateNumber, model, color, deviceCode, department, parkingLocation });
+        await motorcycleApi.update(editingId, { plateNumber, model, color, deviceCode, department });
       } else {
         await motorcycleApi.register({
-          plateNumber, model, color, deviceCode, department, parkingLocation,
+          plateNumber, model, color, deviceCode, department,
           ownerId: currentUser.uid,
           ownerName: userProfile?.displayName || currentUser.email,
         });
@@ -195,6 +196,36 @@ function DeviceRegistration() {
   const handleSelectStatus = (moto) => {
     setSelectedMotorcycle(moto);
     setIsActivated(moto.isActivated !== false);
+    setParkingNote(moto.parkingNote || '');
+  };
+
+  const handleSaveParkingNote = async () => {
+    if (!selectedMotorcycle) return;
+    setParkingNoteUpdating(true);
+    try {
+      const res = await motorcycleApi.updateParkingNote(selectedMotorcycle.id, parkingNote);
+      const updatedAt = res.parkingNoteUpdatedAt || new Date().toISOString();
+      setMotorcycles(prev => prev.map(m =>
+        m.id === selectedMotorcycle.id ? { ...m, parkingNote, parkingNoteUpdatedAt: updatedAt } : m
+      ));
+      setSelectedMotorcycle(prev => ({ ...prev, parkingNote, parkingNoteUpdatedAt: updatedAt }));
+      toast('Parking note saved.', 'success');
+    } catch (err) {
+      toast('Failed to save note: ' + err.message, 'error');
+    } finally {
+      setParkingNoteUpdating(false);
+    }
+  };
+
+  const formatNoteTime = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      if (diff < 60000) return 'just now';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+      return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return ''; }
   };
 
   const handlePhotoClick = (motorcycleId) => {
@@ -277,29 +308,69 @@ function DeviceRegistration() {
               <button onClick={openAdd} className="btn-red text-sm px-4 py-2">+ Add Motorcycle</button>
             </div>
 
-            {/* Status control */}
+            {/* Status control + Parking Note */}
             {selectedMotorcycle && (
-              <div className="rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+              <div className="rounded-xl p-4 flex flex-col gap-4"
                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <div className="flex-1">
-                  <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">
-                    Selected: {selectedMotorcycle.plateNumber}
-                  </p>
-                  <span className={`badge ${isActivated ? 'badge-green' : 'badge-red'}`}>
-                    {isActivated ? 'Active' : 'Inactive'}
-                  </span>
+
+                {/* Activate / Deactivate */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex-1">
+                    <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">
+                      Selected: {selectedMotorcycle.plateNumber}
+                    </p>
+                    <span className={`badge ${isActivated ? 'badge-green' : 'badge-red'}`}>
+                      {isActivated ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleActivate} disabled={isActivated}
+                      className="px-5 py-2 rounded-lg font-bold text-sm text-white transition-all disabled:opacity-40"
+                      style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}>
+                      Activate
+                    </button>
+                    <button onClick={handleDeactivate} disabled={!isActivated}
+                      className="px-5 py-2 rounded-lg font-bold text-sm text-white transition-all disabled:opacity-40"
+                      style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}>
+                      Deactivate
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={handleActivate} disabled={isActivated}
-                    className="px-5 py-2 rounded-lg font-bold text-sm text-white transition-all disabled:opacity-40"
-                    style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}>
-                    Activate
-                  </button>
-                  <button onClick={handleDeactivate} disabled={!isActivated}
-                    className="px-5 py-2 rounded-lg font-bold text-sm text-white transition-all disabled:opacity-40"
-                    style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}>
-                    Deactivate
-                  </button>
+
+                {/* Divider */}
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.07)' }} />
+
+                {/* Parking Note */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-white/40 text-xs uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                      </svg>
+                      Parking Note
+                    </p>
+                    {selectedMotorcycle.parkingNoteUpdatedAt && (
+                      <span className="text-white/25 text-xs">Updated {formatNoteTime(selectedMotorcycle.parkingNoteUpdatedAt)}</span>
+                    )}
+                  </div>
+                  <textarea
+                    value={parkingNote}
+                    onChange={e => { if (e.target.value.length <= 300) setParkingNote(e.target.value); }}
+                    placeholder="Describe where you parked — e.g. Near Gate 2, Building A parking, beside the white van…"
+                    rows={3}
+                    className="w-full rounded-lg px-4 py-3 text-white text-sm outline-none resize-none"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}
+                  />
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-white/25 text-xs">{parkingNote.length}/300</span>
+                    <button
+                      onClick={handleSaveParkingNote}
+                      disabled={parkingNoteUpdating}
+                      className="px-4 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-50 hover:opacity-80 transition-all"
+                      style={{ background: 'rgba(99,102,241,0.7)' }}>
+                      {parkingNoteUpdating ? 'Saving…' : 'Save Note'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -442,7 +513,6 @@ function DeviceRegistration() {
                 { key: 'color', placeholder: 'Color', required: true },
                 { key: 'deviceCode', placeholder: 'Device Code', required: true },
                 { key: 'department', placeholder: 'Department (optional)', required: false },
-                { key: 'parkingLocation', placeholder: 'Parking Location (optional)', required: false },
               ].map(({ key, placeholder, required }) => (
                 <input
                   key={key}

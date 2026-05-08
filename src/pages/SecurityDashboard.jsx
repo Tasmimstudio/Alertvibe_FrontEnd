@@ -58,6 +58,8 @@ function SecurityDashboard() {
         status: m.status || 'active',
         isActivated: m.isActivated !== false,
         parkingLocation: m.parkingLocation || null,
+        parkingNote: m.parkingNote || null,
+        parkingNoteUpdatedAt: m.parkingNoteUpdatedAt || null,
         createdAt: m.createdAt || null,
       })));
     } catch (error) {
@@ -309,7 +311,6 @@ function SecurityDashboard() {
                   { label: 'Color', value: selectedMotorcycle.color },
                   { label: 'Device Code', value: selectedMotorcycle.deviceCode },
                   { label: 'Department', value: selectedMotorcycle.department || 'N/A' },
-                  ...(selectedMotorcycle.parkingLocation ? [{ label: 'Parking Location', value: selectedMotorcycle.parkingLocation }] : []),
                   { label: 'Registered', value: formatDate(selectedMotorcycle.createdAt), span: 2 },
                 ].map(({ label, value, span }) => (
                   <div key={label} className={`rounded-xl p-3 ${span === 2 ? 'col-span-2' : ''}`}
@@ -318,6 +319,29 @@ function SecurityDashboard() {
                     <p className="text-white font-semibold">{value}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Parking Note */}
+              <div className="rounded-xl p-4"
+                   style={selectedMotorcycle.parkingNote
+                     ? { background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.3)' }
+                     : { background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-indigo-400 text-xs uppercase tracking-wider font-bold flex items-center gap-1.5">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    Parking Note
+                  </p>
+                  {selectedMotorcycle.parkingNoteUpdatedAt && (
+                    <span className="text-white/30 text-xs">{formatDate(selectedMotorcycle.parkingNoteUpdatedAt)}</span>
+                  )}
+                </div>
+                {selectedMotorcycle.parkingNote ? (
+                  <p className="text-white/85 text-sm leading-relaxed">{selectedMotorcycle.parkingNote}</p>
+                ) : (
+                  <p className="text-white/30 text-sm italic">No parking note set by owner.</p>
+                )}
               </div>
 
               {/* Owner contact */}
