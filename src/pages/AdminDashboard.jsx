@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { adminApi, userApi } from '../services/api';
+import { adminApi, userApi, motorcycleApi } from '../services/api';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmDialog';
 import BottomNav from '../components/BottomNav';
@@ -45,6 +45,12 @@ const SB_ITEMS = [
   { key: 'alerts', label: 'Alert History', icon: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+    </svg>
+  )},
+  { key: 'models', label: 'Moto Models', icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/>
+      <path d="M15 6h-3l-2 5.5M5.5 14L8 8.5h5.5L16 14"/>
     </svg>
   )},
   { key: 'settings', label: 'System Settings', icon: (
@@ -136,6 +142,12 @@ function AdminDashboard() {
   const [securityForm, setSecurityForm] = useState({ email: '', password: '', displayName: '' });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [models, setModels] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [newModelName, setNewModelName] = useState('');
+  const [modelSaving, setModelSaving] = useState(false);
+  const [editingModelId, setEditingModelId] = useState(null);
+  const [editingModelName, setEditingModelName] = useState('');
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -143,6 +155,10 @@ function AdminDashboard() {
     if (!isAdmin()) { navigate('/'); return; }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'models') fetchModels();
+  }, [activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -215,6 +231,61 @@ function AdminDashboard() {
       setFormError(error.message || 'Failed to add security personnel');
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const fetchModels = async () => {
+    setModelsLoading(true);
+    try {
+      const data = await motorcycleApi.listModels();
+      setModels(data.modelList || []);
+    } catch (err) {
+      toast('Failed to load models: ' + err.message, 'error');
+    } finally {
+      setModelsLoading(false);
+    }
+  };
+
+  const handleAddModel = async (e) => {
+    e.preventDefault();
+    if (!newModelName.trim()) return;
+    setModelSaving(true);
+    try {
+      const data = await motorcycleApi.addModel(newModelName.trim());
+      setModels(prev => [...prev, data.model].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewModelName('');
+      toast('Model added successfully.', 'success');
+    } catch (err) {
+      toast('Failed to add model: ' + err.message, 'error');
+    } finally {
+      setModelSaving(false);
+    }
+  };
+
+  const handleUpdateModel = async (id) => {
+    if (!editingModelName.trim()) return;
+    try {
+      await motorcycleApi.updateModel(id, editingModelName.trim());
+      setModels(prev =>
+        prev.map(m => m.id === id ? { ...m, name: editingModelName.trim() } : m)
+            .sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setEditingModelId(null);
+      toast('Model updated.', 'success');
+    } catch (err) {
+      toast('Failed to update model: ' + err.message, 'error');
+    }
+  };
+
+  const handleDeleteModel = async (id, name) => {
+    const ok = await confirm(`Delete "${name}"? This cannot be undone.`, 'Delete Model');
+    if (!ok) return;
+    try {
+      await motorcycleApi.deleteModel(id);
+      setModels(prev => prev.filter(m => m.id !== id));
+      toast(`"${name}" deleted.`, 'info');
+    } catch (err) {
+      toast('Failed to delete model: ' + err.message, 'error');
     }
   };
 
@@ -554,6 +625,91 @@ function AdminDashboard() {
                 pageSize={PAGE_SIZE}
                 total={alerts.length}
               />
+            </div>
+
+          ) : activeTab === 'models' ? (
+
+            /* ── Motorcycle Models ── */
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-white font-bold text-xl">Motorcycle Models</h2>
+                <span className="text-white/40 text-sm">{models.length} models</span>
+              </div>
+
+              {/* Add new model */}
+              <div className="glass p-5" style={{ borderLeft: '3px solid #a855f7' }}>
+                <p className="text-white/45 text-xs uppercase tracking-widest font-semibold mb-3">Add New Model</p>
+                <form onSubmit={handleAddModel} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newModelName}
+                    onChange={e => setNewModelName(e.target.value)}
+                    placeholder="e.g. Honda ADV 160"
+                    className="av-input flex-1"
+                  />
+                  <button
+                    type="submit"
+                    disabled={modelSaving || !newModelName.trim()}
+                    className="px-5 py-2.5 rounded-xl font-bold text-white text-sm flex-shrink-0 disabled:opacity-50 transition-all hover:-translate-y-px"
+                    style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)', boxShadow: '0 4px 14px rgba(168,85,247,0.3)' }}>
+                    {modelSaving ? 'Adding…' : '+ Add'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Model list */}
+              <div className="glass p-5">
+                <p className="text-white/45 text-xs uppercase tracking-widest font-semibold mb-4">All Models</p>
+                {modelsLoading ? (
+                  <div className="flex items-center justify-center py-8"><div className="av-spinner" /></div>
+                ) : models.length === 0 ? (
+                  <p className="text-white/40 text-sm text-center py-6">No models yet. Add one above.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {models.map(model => (
+                      <div key={model.id} className="flex items-center gap-2 px-4 py-3 rounded-xl"
+                           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        {editingModelId === model.id ? (
+                          <>
+                            <input
+                              type="text"
+                              value={editingModelName}
+                              onChange={e => setEditingModelName(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') handleUpdateModel(model.id); if (e.key === 'Escape') setEditingModelId(null); }}
+                              className="av-input flex-1 py-1 text-sm"
+                              autoFocus
+                            />
+                            <button onClick={() => handleUpdateModel(model.id)}
+                              className="text-green-400 hover:text-green-300 text-xs font-bold px-2 transition-colors">Save</button>
+                            <button onClick={() => setEditingModelId(null)}
+                              className="text-white/40 hover:text-white/70 text-xs px-1 transition-colors">✕</button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-white text-sm font-medium truncate">{model.name}</span>
+                            <button
+                              onClick={() => { setEditingModelId(model.id); setEditingModelName(model.name); }}
+                              className="text-white/30 hover:text-indigo-400 transition-colors p-1 flex-shrink-0"
+                              title="Edit">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteModel(model.id, model.name)}
+                              className="text-white/30 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+                              title="Delete">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                              </svg>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
           ) : (

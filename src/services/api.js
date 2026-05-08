@@ -176,6 +176,26 @@ export const motorcycleApi = {
     return apiRequest('/motorcycles/models');
   },
 
+  addModel: async (name) => {
+    return apiRequest('/motorcycles/models', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  updateModel: async (id, name) => {
+    return apiRequest(`/motorcycles/models/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  deleteModel: async (id) => {
+    return apiRequest(`/motorcycles/models/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   register: async (motorcycleData) => {
     return apiRequest('/motorcycles', {
       method: 'POST',
