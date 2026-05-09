@@ -242,25 +242,22 @@ function Login() {
 
         {/* Deep maroon gradient */}
         <div className="absolute inset-0 pointer-events-none"
-             style={{ background: 'linear-gradient(160deg, #0c0202 0%, #180404 50%, #0f0303 100%)' }}/>
+             style={{ background: 'linear-gradient(160deg, #0a0520 0%, #150832 50%, #0d0628 100%)' }}/>
 
         {/* Radial red glow */}
         <div className="absolute inset-0 pointer-events-none"
-             style={{ background: 'radial-gradient(ellipse at 50% 52%, rgba(185,14,14,0.22) 0%, transparent 62%)' }}/>
+             style={{ background: 'radial-gradient(ellipse at 50% 52%, rgba(124,58,237,0.28) 0%, transparent 62%)' }}/>
 
         {/* Right-edge separator */}
         <div className="absolute right-0 inset-y-0 w-px pointer-events-none"
-             style={{ background: 'linear-gradient(to bottom, transparent 5%, rgba(220,38,38,0.25) 30%, rgba(220,38,38,0.25) 70%, transparent 95%)' }}/>
+             style={{ background: 'linear-gradient(to bottom, transparent 5%, rgba(139,92,246,0.3) 30%, rgba(139,92,246,0.3) 70%, transparent 95%)' }}/>
 
         <div className="relative z-10 flex flex-col h-full px-12 py-10">
 
           {/* University top */}
           <div>
-            <p className="text-white/55 text-[10px] font-semibold tracking-[0.28em] uppercase">
-              Mindanao State University
-            </p>
-            <p className="text-white/32 text-[9.5px] tracking-[0.14em] uppercase mt-0.5">
-              Tawi-Tawi College of Technology and Oceanography
+            <p className="text-white/70 text-sm font-bold tracking-[0.1em] uppercase leading-relaxed text-center">
+              AlertVibe: Motorcycle Alert System with Push Notification for MSU-TCTO
             </p>
           </div>
 
@@ -269,27 +266,18 @@ function Login() {
 
             {/* Logo mark */}
             <div className="flex flex-col items-center gap-5">
-              <div className="av-logo" style={{ width: 72, height: 72, borderRadius: 22, boxShadow: '0 0 40px rgba(220,38,38,0.25), 0 8px 24px rgba(0,0,0,0.5)' }}>
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V6L12 2z" fill="white" fillOpacity="0.9"/>
-                  <path d="M9 12l2 2 4-4" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+              <div className="av-logo" style={{ width: 260, height: 260, borderRadius: '50%' }}>
+                <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
               </div>
 
-              <div>
-                <h1 className="text-[2.6rem] font-black tracking-[0.18em] text-white leading-none"
-                    style={{ textShadow: '0 2px 20px rgba(220,38,38,0.3)' }}>
-                  ALERTVIBE
-                </h1>
-                <p className="text-white/40 text-[10.5px] tracking-[0.35em] uppercase mt-2">
-                  Motorcycle Security System
-                </p>
-              </div>
+              <p className="text-white/40 text-[10px] tracking-[0.25em] uppercase">
+                MSU-TCTO
+              </p>
 
               <div className="flex items-center gap-2.5">
-                <div className="h-px w-10" style={{ background: 'linear-gradient(to right, transparent, rgba(220,38,38,0.6))' }}/>
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(220,38,38,0.7)' }}/>
-                <div className="h-px w-10" style={{ background: 'linear-gradient(to left, transparent, rgba(220,38,38,0.6))' }}/>
+                <div className="h-px w-10" style={{ background: 'linear-gradient(to right, transparent, rgba(139,92,246,0.7))' }}/>
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(139,92,246,0.9)' }}/>
+                <div className="h-px w-10" style={{ background: 'linear-gradient(to left, transparent, rgba(139,92,246,0.7))' }}/>
               </div>
             </div>
 
@@ -340,13 +328,9 @@ function Login() {
 
         {/* Mobile branding */}
         <div className="lg:hidden flex flex-col items-center mb-8 relative z-10">
-          <div className="av-logo mb-3" style={{ width: 54, height: 54, borderRadius: 16 }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V6L12 2z" fill="white" fillOpacity="0.9"/>
-              <path d="M9 12l2 2 4-4" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <div className="av-logo mb-2" style={{ width: 180, height: 180, borderRadius: '50%' }}>
+            <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-black tracking-widest text-white">ALERTVIBE</h1>
           <p className="text-white/38 text-xs mt-1 tracking-wider">MSU-TCTO Security System</p>
         </div>
 

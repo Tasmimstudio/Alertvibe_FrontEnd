@@ -143,16 +143,10 @@ function Registration() {
         {/* Header */}
         <div className="flex items-center justify-between mb-7">
           <div className="flex items-center gap-3">
-            <div className="av-logo" style={{ width: 44, height: 44, borderRadius: 12 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V6L12 2z" fill="white" fillOpacity="0.9"/>
-                <path d="M9 12l2 2 4-4" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+            <div className="av-logo" style={{ width: 130, height: 130, borderRadius: '50%' }}>
+              <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
             </div>
-            <div>
-              <h1 className="text-white font-black tracking-widest text-base">ALERTVIBE</h1>
-              <p className="text-white/40 text-xs">Create Account — MSU-TCTO</p>
-            </div>
+            <p className="text-white/40 text-xs">Create Account — MSU-TCTO</p>
           </div>
         </div>
 

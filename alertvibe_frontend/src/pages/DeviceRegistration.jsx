@@ -9,10 +9,7 @@ import BottomNav from '../components/BottomNav';
 
 const Logo = () => (
   <div className="av-logo">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V6L12 2z" fill="white" fillOpacity="0.9"/>
-      <path d="M9 12l2 2 4-4" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+    <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
   </div>
 );
 const HomeIcon = () => (
@@ -258,7 +255,6 @@ function DeviceRegistration() {
         <div className="flex items-center gap-3">
           <Logo />
           <div>
-            <h1 className="text-lg font-black tracking-widest text-white leading-tight">ALERTVIBE</h1>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-2 h-2 rounded-full bg-green-400 status-pulse" />
               <span className="text-green-400 text-xs font-semibold tracking-wider">CONNECTED</span>
