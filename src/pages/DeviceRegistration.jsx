@@ -101,6 +101,7 @@ function DeviceRegistration() {
         const first = list[0];
         setSelectedMotorcycle(first);
         setIsActivated(first.isActivated !== false);
+        setParkingNote(first.parkingNote || '');
       }
     } catch (error) {
       console.error('Error fetching motorcycles:', error);
