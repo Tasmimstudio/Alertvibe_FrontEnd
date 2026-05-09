@@ -350,7 +350,7 @@ function Login() {
           <p className="text-white/38 text-xs mt-1 tracking-wider">MSU-TCTO Security System</p>
         </div>
 
-        <FormBody />
+        {FormBody({})}
       </div>
 
       <style>{`
