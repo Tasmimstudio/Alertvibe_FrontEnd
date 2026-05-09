@@ -24,10 +24,7 @@ function ProtectedRoute({ children, requiredRole }) {
       <div className="av-bg min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="av-logo" style={{ width: 56, height: 56, borderRadius: 16 }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V6L12 2z" fill="white" fillOpacity="0.9"/>
-              <path d="M9 12l2 2 4-4" stroke="#dc2626" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
           </div>
           <div className="av-spinner" />
           <p className="text-white/40 text-sm font-medium tracking-wide">Loading AlertVibe…</p>
