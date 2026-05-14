@@ -45,7 +45,7 @@ export default function Profile() {
   const photoInputRef = useRef(null);
 
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
-  const [phone, setPhone]             = useState(userProfile?.phone || '');
+  const [phone, setPhone]             = useState(userProfile?.phoneNumber || '');
   const [savingInfo, setSavingInfo]   = useState(false);
 
   const [currentPw, setCurrentPw] = useState('');
@@ -63,7 +63,7 @@ export default function Profile() {
     if (!displayName.trim()) { toast('Display name is required.', 'warning'); return; }
     setSavingInfo(true);
     try {
-      await updateProfile({ displayName: displayName.trim(), phone: phone.trim() });
+      await updateProfile({ displayName: displayName.trim(), phoneNumber: phone.trim() });
       toast('Profile updated successfully.', 'success');
     } catch (err) {
       toast(err.message || 'Failed to update profile.', 'error');
