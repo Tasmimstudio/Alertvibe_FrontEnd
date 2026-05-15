@@ -9,6 +9,17 @@ import { formatDate } from '../utils/formatDate';
 
 const PAGE_SIZE = 15;
 
+const readKey = (uid) => `alertvibe:read:${uid}`;
+const getReadIds = (uid) => {
+  try {
+    const stored = localStorage.getItem(readKey(uid));
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch { return new Set(); }
+};
+const saveReadIds = (uid, ids) => {
+  try { localStorage.setItem(readKey(uid), JSON.stringify([...ids])); } catch {}
+};
+
 const Logo = () => (
   <div className="av-logo">
     <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
@@ -36,6 +47,11 @@ const LogoutIcon = () => (
     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
   </svg>
 );
+const TrashIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+  </svg>
+);
 
 const AlertHistory = () => {
   const navigate = useNavigate();
@@ -44,6 +60,8 @@ const AlertHistory = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [deletingId, setDeletingId] = useState(null);
+  const [clearingAll, setClearingAll] = useState(false);
 
   useEffect(() => { fetchAlerts(); }, []);
 
@@ -51,13 +69,14 @@ const AlertHistory = () => {
     setLoading(true);
     try {
       const data = await alertApi.listAlerts();
+      const readIds = getReadIds(currentUser?.uid);
       const formattedAlerts = (Array.isArray(data) ? data : []).map(alert => ({
         id: alert.id,
         date: formatDate(alert.timestamp, 'date'),
         time: formatDate(alert.timestamp, 'time'),
         motorcycle: alert.deviceId || 'Unknown',
         message: alert.message || 'VIBRATION DETECTED',
-        isRead: alert.responded || false,
+        isRead: alert.responded || readIds.has(alert.id),
         _raw: alert.timestamp,
       }));
       setAlerts(formattedAlerts);
@@ -74,7 +93,55 @@ const AlertHistory = () => {
   };
 
   const toggleReadStatus = (alertId) => {
-    setAlerts(alerts.map(a => a.id === alertId ? { ...a, isRead: !a.isRead } : a));
+    const readIds = getReadIds(currentUser?.uid);
+    const updated = alerts.map(a => {
+      if (a.id !== alertId) return a;
+      const next = !a.isRead;
+      if (next) readIds.add(alertId); else readIds.delete(alertId);
+      return { ...a, isRead: next };
+    });
+    saveReadIds(currentUser?.uid, readIds);
+    setAlerts(updated);
+  };
+
+  const markAllRead = () => {
+    const readIds = getReadIds(currentUser?.uid);
+    alerts.forEach(a => readIds.add(a.id));
+    saveReadIds(currentUser?.uid, readIds);
+    setAlerts(alerts.map(a => ({ ...a, isRead: true })));
+  };
+
+  const unreadCount = alerts.filter(a => !a.isRead).length;
+
+  const handleDelete = async (alertId) => {
+    setDeletingId(alertId);
+    try {
+      await alertApi.deleteAlert(alertId);
+      const readIds = getReadIds(currentUser?.uid);
+      readIds.delete(alertId);
+      saveReadIds(currentUser?.uid, readIds);
+      setAlerts(prev => prev.filter(a => a.id !== alertId));
+    } catch (err) {
+      console.error('Delete failed:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm(`Delete all ${alerts.length} alert${alerts.length !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setClearingAll(true);
+    try {
+      await Promise.all(alerts.map(a => alertApi.deleteAlert(a.id)));
+      const readIds = getReadIds(currentUser?.uid);
+      alerts.forEach(a => readIds.delete(a.id));
+      saveReadIds(currentUser?.uid, readIds);
+      setAlerts([]);
+    } catch (err) {
+      console.error('Clear all failed:', err);
+    } finally {
+      setClearingAll(false);
+    }
   };
 
   const filtered = alerts.filter(a =>
@@ -164,7 +231,26 @@ const AlertHistory = () => {
             <div className="flex items-center justify-between px-6 py-4"
                  style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
               <h2 className="text-white font-bold text-lg">Alert Log</h2>
-              <span className="badge badge-blue">{filtered.length} alert{filtered.length !== 1 ? 's' : ''}</span>
+              <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllRead}
+                    className="text-xs font-semibold text-white/50 hover:text-white transition-colors underline underline-offset-2"
+                  >
+                    Mark all as read ({unreadCount})
+                  </button>
+                )}
+                {alerts.length > 0 && (
+                  <button
+                    onClick={handleDeleteAll}
+                    disabled={clearingAll}
+                    className="text-xs font-semibold text-red-400/70 hover:text-red-400 transition-colors underline underline-offset-2 disabled:opacity-40"
+                  >
+                    {clearingAll ? 'Clearing…' : 'Delete all'}
+                  </button>
+                )}
+                <span className="badge badge-blue">{filtered.length} alert{filtered.length !== 1 ? 's' : ''}</span>
+              </div>
             </div>
 
             {loading ? (
@@ -189,6 +275,7 @@ const AlertHistory = () => {
                       <th className="text-left">Device</th>
                       <th className="text-left">Message</th>
                       <th className="text-center">Status</th>
+                      <th className="text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -212,6 +299,18 @@ const AlertHistory = () => {
                               className="w-4 h-4 cursor-pointer accent-red-500"
                             />
                           </label>
+                        </td>
+                        <td className="text-center">
+                          <button
+                            onClick={() => handleDelete(alert.id)}
+                            disabled={deletingId === alert.id}
+                            title="Delete alert"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                          >
+                            {deletingId === alert.id
+                              ? <span className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
+                              : <TrashIcon />}
+                          </button>
                         </td>
                       </tr>
                     ))}

@@ -513,6 +513,7 @@ function AdminDashboard() {
                 <table className="w-full av-table">
                   <thead>
                     <tr>
+                      <th className="text-left">Photo</th>
                       <th className="text-left">Name</th>
                       <th className="text-left">Email</th>
                       <th className="text-left">Phone</th>
@@ -525,6 +526,19 @@ function AdminDashboard() {
                   <tbody>
                     {pagedUsers.map((user) => (
                       <tr key={user.id}>
+                        <td>
+                          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                               style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                            {user.photoURL ? (
+                              <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm"
+                                   style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)' }}>
+                                {user.displayName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="font-semibold text-white">{user.displayName || 'N/A'}</td>
                         <td className="text-white/60 text-sm">{user.email}</td>
                         <td className="text-white/60 text-sm">{user.phoneNumber || <span className="text-white/25">—</span>}</td>
