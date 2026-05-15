@@ -7,6 +7,13 @@ import BottomNav from '../components/BottomNav';
 import { formatDate } from '../utils/formatDate';
 
 const pendingMotorcycleKey = (uid) => `alertvibe:pendingMotorcycle:${uid}`;
+const readKey = (uid) => `alertvibe:read:${uid}`;
+const getReadIds = (uid) => {
+  try {
+    const stored = localStorage.getItem(readKey(uid));
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch { return new Set(); }
+};
 
 /* ── Icons ──────────────────────────────────────── */
 const HomeIcon = () => (
@@ -126,13 +133,14 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const alertsData = await alertApi.listAlerts();
+      const readIds = getReadIds(currentUser?.uid);
       const formattedAlerts = (Array.isArray(alertsData) ? alertsData : []).map(alert => ({
         id: alert.id,
         date: formatDate(alert.timestamp, 'date'),
         message: alert.message || 'Vibration detected',
         deviceId: alert.deviceId,
         severity: alert.severity,
-        isRead: alert.responded || false,
+        isRead: alert.responded || readIds.has(alert.id),
       }));
       setAlerts(formattedAlerts);
 
