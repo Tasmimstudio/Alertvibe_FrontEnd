@@ -137,7 +137,7 @@ function Registration() {
            style={{ background: 'radial-gradient(circle,#7c3aed,transparent)' }} />
 
       {/* Card */}
-      <div className="glass relative z-10 w-full max-w-md mx-6 px-8 py-8"
+      <div className="glass relative z-10 w-full max-w-md mx-4 sm:mx-6 px-5 sm:px-8 py-7 sm:py-8"
            style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12)' }}>
 
         {/* Header */}
@@ -192,7 +192,7 @@ function Registration() {
                   name={field.name}
                   value={formData[field.name]}
                   onChange={handleInputChange}
-                  className={`av-input ${field.icon ? 'pl-10' : ''}`}
+                  className={`av-input ${field.icon ? '!pl-10' : ''}`}
                   placeholder={field.placeholder}
                   required
                 />
@@ -203,12 +203,15 @@ function Registration() {
         {/* Actions */}
         <div className="flex gap-3 mt-6">
           <button onClick={handleBack} disabled={loading}
-            className="flex-1 py-3 rounded-xl font-bold text-sm text-white/60 transition-all hover:text-white disabled:opacity-40"
-            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
-            ← Back to Login
+            className="flex-1 inline-flex items-center justify-center gap-2 py-1.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-40"
+            style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.25),rgba(6,182,212,0.15))', border: '1px solid rgba(139,92,246,0.35)', color: 'rgba(255,255,255,0.85)' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Back to Login
           </button>
 
-            <button onClick={handleSubmit} disabled={loading} className="btn-red flex-1 py-3">
+            <button onClick={handleSubmit} disabled={loading} className="btn-red flex-1">
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">

@@ -193,30 +193,30 @@ function SecurityAlertLog() {
     <div className="av-bg av-grid-bg h-screen overflow-hidden flex flex-col" style={{ minHeight: '100dvh' }}>
 
       {/* Header */}
-      <header className="flex items-center justify-between px-8 py-4"
+      <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center gap-3">
           <Logo />
           <div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-2 h-2 rounded-full bg-amber-400" style={{ boxShadow: '0 0 0 3px rgba(251,191,36,0.25)' }} />
-              <span className="text-amber-400 text-xs font-semibold tracking-wider">SECURITY ACCESS</span>
+              <span className="text-amber-400 text-xs font-semibold tracking-wider hidden sm:inline">SECURITY ACCESS</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <ThemeSwitch />
-          <div className="text-right">
-            <p className="text-white text-base font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
+          <div className="text-right hidden sm:block">
+            <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
             <p className="text-amber-400 text-xs font-semibold">Security</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile"
-                   className="w-20 h-20 rounded-full object-cover"
+                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
             ) : (
-              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-white text-sm"
                    style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
                 {initials}
               </div>
@@ -295,7 +295,7 @@ function SecurityAlertLog() {
                   <button
                     key={f.key}
                     onClick={() => handleFilterChange(f.key)}
-                    className={`tab-pill flex items-center gap-1.5 py-2 ${filter === f.key ? 'tab-active' : ''}`}
+                    className={`tab-pill flex items-center gap-1.5 ${filter === f.key ? 'tab-active' : ''}`}
                   >
                     {f.label}
                     <span className="px-1.5 py-0.5 rounded-full text-xs font-bold"
@@ -472,7 +472,7 @@ function SecurityAlertLog() {
                   <div className="flex flex-wrap gap-2">
                     {selectedAlert.ownerPhone ? (
                       <a href={`tel:${selectedAlert.ownerPhone}`}
-                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-80 transition-all"
+                         className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-bold text-white hover:opacity-80 transition-all"
                          style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
@@ -482,7 +482,7 @@ function SecurityAlertLog() {
                     ) : <span className="text-white/30 text-sm">No phone number</span>}
                     {selectedAlert.ownerEmail && (
                       <a href={`mailto:${selectedAlert.ownerEmail}`}
-                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-80 transition-all"
+                         className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl text-sm font-bold text-white hover:opacity-80 transition-all"
                          style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
                         ✉️ Email
                       </a>
@@ -530,13 +530,13 @@ function SecurityAlertLog() {
                   </button>
                 ) : (
                   <button onClick={() => handleToggleResponded(false)} disabled={responding}
-                    className="flex-1 py-3 rounded-xl font-bold text-white transition-all disabled:opacity-50 hover:opacity-80"
+                    className="flex-1 py-1.5 rounded-xl font-bold text-white transition-all disabled:opacity-50 hover:opacity-80"
                     style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
                     {responding ? 'Undoing…' : 'Undo Response'}
                   </button>
                 )}
                 <button onClick={handleCloseModal}
-                  className="px-6 py-3 rounded-xl font-bold text-white/60 transition-all hover:text-white"
+                  className="px-5 py-1.5 rounded-xl font-bold text-white/60 transition-all hover:text-white"
                   style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
                   Close
                 </button>

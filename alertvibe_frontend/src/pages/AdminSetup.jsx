@@ -131,7 +131,7 @@ function AdminSetup() {
             <button
               type="submit"
               disabled={loading || !currentUser}
-              className="w-full py-3 rounded-lg font-bold text-white transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+              className="w-full py-1.5 rounded-lg font-bold text-white transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
               style={{ background: '#dc2626' }}
             >
               {loading ? 'Setting up...' : 'Create Admin Account'}
@@ -140,11 +140,15 @@ function AdminSetup() {
         )}
 
         {/* Back Link */}
-        <div className="text-center mt-6">
+        <div className="flex justify-center mt-6">
           <button
             onClick={() => navigate('/login')}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-1.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-95"
+            style={{ background: 'linear-gradient(135deg,rgba(124,58,237,0.25),rgba(6,182,212,0.15))', border: '1px solid rgba(139,92,246,0.35)', color: 'rgba(255,255,255,0.85)' }}
           >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
             Back to Login
           </button>
         </div>
