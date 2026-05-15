@@ -29,8 +29,16 @@
 // ─── CONFIGURE THESE ────────────────────────────────────────────────────────
 const char* DEFAULT_SSID     = "SIGIDAS";
 const char* DEFAULT_PASSWORD = "Lolipop123";
-const char* BACKEND_URL      = "https://alertvibe-backend.onrender.com/api/alerts";
-const char* WIFI_CONFIG_URL  = "https://alertvibe-backend.onrender.com/api/motorcycles/wifi/config";
+
+// LOCAL backend (same WiFi as the ESP32 — no sleep/timeout issues)
+// Use your PC's local IP. Switch to Render URL once ready for production.
+const char* BACKEND_URL      = "http://192.168.1.146:4000/api/alerts";
+const char* WIFI_CONFIG_URL  = "http://192.168.1.146:4000/api/motorcycles/wifi/config";
+
+// PRODUCTION (uncomment when deploying):
+// const char* BACKEND_URL   = "https://alertvibe-backend.onrender.com/api/alerts";
+// const char* WIFI_CONFIG_URL = "https://alertvibe-backend.onrender.com/api/motorcycles/wifi/config";
+
 const char* DEVICE_ID        = "motorcycle-01";
 const char* LOCATION         = "Motorcycle";
 // ────────────────────────────────────────────────────────────────────────────
@@ -51,16 +59,16 @@ Preferences prefs;
 #define LED_BLUE_SAFE   19   // GPIO19 — Safe / device working
 
 // Detection thresholds (pulse count)
-#define LOW_THRESHOLD   2    // 2+  pulses  → low
-#define MED_THRESHOLD   3    // 3+  pulses  → medium
-#define HIGH_THRESHOLD  5    // 5+  pulses  → hard / alert
+#define LOW_THRESHOLD   1    // 1+  pulses  → low
+#define MED_THRESHOLD   2    // 2+  pulses  → medium
+#define HIGH_THRESHOLD  3    // 3+  pulses  → alert (lowered for testing; set to 5 for production)
 
 // Timing (milliseconds)
 #define DEBOUNCE_MS     20
 #define COOLDOWN_MS     5000
 #define WIFI_TIMEOUT    20000
-#define LED_HOLD_MS     75
-#define PULSE_WINDOW_MS 2000
+#define LED_HOLD_MS     100
+#define PULSE_WINDOW_MS 3000
 
 // ─── State ───────────────────────────────────────────────────────────────────
 unsigned long lastAlertTime     = 0;
@@ -110,8 +118,7 @@ String extractJsonString(const String& json, const String& key) {
 void checkWifiConfigUpdate() {
   if (WiFi.status() != WL_CONNECTED) return;
 
-  WiFiClientSecure client;
-  client.setInsecure();
+  WiFiClient client;
   HTTPClient http;
 
   String url = String(WIFI_CONFIG_URL) + "?deviceId=" + String(DEVICE_ID);
@@ -194,12 +201,11 @@ bool sendAlert(int count) {
     connectWiFi();
   }
 
-  WiFiClientSecure client;
-  client.setInsecure();   // Skip SSL certificate verification
-
   HTTPClient http;
-  http.begin(client, BACKEND_URL);
-  http.setTimeout(15000);
+  // Use plain WiFiClient for HTTP (local backend). For HTTPS (Render), swap in WiFiClientSecure + setInsecure().
+  WiFiClient plainClient;
+  http.begin(plainClient, BACKEND_URL);
+  http.setTimeout(20000);
   http.addHeader("Content-Type", "application/json");
 
   const char* sev;
@@ -277,7 +283,7 @@ void setup() {
   allLedsOff();
   delay(200);
 
-  pinMode(VIBRATION_PIN, INPUT);
+  pinMode(VIBRATION_PIN, INPUT_PULLUP);  // pull-up keeps pin HIGH when idle; SW-40 pulls LOW on vibration
 
   loadCredentials();
   connectWiFi();
@@ -360,13 +366,6 @@ void loop() {
     Serial.println(pulseCount);
     pulseCount = 0;
     setSafeState();
-  }
-
-  // ── Poll backend for WiFi config updates every 5 minutes ─────────────────
-  static unsigned long lastConfigCheck = 0;
-  if (now - lastConfigCheck > 300000UL) {
-    lastConfigCheck = now;
-    checkWifiConfigUpdate();
   }
 
   delay(5);
