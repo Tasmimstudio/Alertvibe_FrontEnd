@@ -132,7 +132,7 @@ function Login() {
             </div>
             <div>
               <p className="text-white font-black text-2xl tracking-wide leading-none">AlertVibe™</p>
-              <p className="text-white/45 text-xs mt-1 tracking-wider">MSU-TCTO</p>
+              <p className="text-white/75 text-xs mt-1 tracking-wider font-semibold">MSU-TCTO</p>
               <p className="text-xs font-semibold mt-2 italic"
                  style={{ background: 'linear-gradient(135deg, #22d3ee, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                 Protect What Moves You.
@@ -153,8 +153,8 @@ function Login() {
           </div>
 
           {/* Footer */}
-          <p className="text-white/25 text-[10px] tracking-widest uppercase">
-            Institute of Information Communication Technology
+          <p className="text-white/70 text-[10px] tracking-widest uppercase font-semibold">
+            College of Computer Studies
           </p>
         </div>
       </div>
@@ -382,7 +382,7 @@ function Login() {
               <p className="text-gray-600 text-sm leading-relaxed">
                 <span className="font-bold text-gray-800">AlertVibe</span> is a capstone project developed at the
                 <span className="font-semibold"> Mindanao State University – Tawi-Tawi College of Technology and Oceanography (MSU-TCTO)</span>,
-                under the Institute of Information Communication Technology (IICT).
+                under the College of Computer Studies (CCS).
               </p>
               <p className="text-gray-600 text-sm leading-relaxed">
                 It provides a real-time motorcycle anti-theft detection system using an ESP8266 microcontroller
@@ -391,7 +391,7 @@ function Login() {
               <div className="grid grid-cols-2 gap-3 pt-1">
                 {[
                   { label: 'Institution',   value: 'MSU-TCTO' },
-                  { label: 'Department',    value: 'IICT' },
+                  { label: 'Department',    value: 'CCS' },
                   { label: 'Microcontroller', value: 'ESP8266' },
                   { label: 'Sensor',        value: 'SW-420 Vibration' },
                   { label: 'Notifications', value: 'Firebase FCM' },

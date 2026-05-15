@@ -772,7 +772,7 @@ function AdminDashboard() {
                     { label: 'System Name', value: 'ALERTVIBE' },
                     { label: 'Institution', value: 'MSU-TCTO' },
                     { label: 'Location', value: 'Sanga-sanga, Bongao, Tawi-Tawi' },
-                    { label: 'Institute', value: 'Institute of Information Communication Technology' },
+                    { label: 'Institute', value: 'College of Computer Studies (CCS)' },
                     { label: 'Microcontroller', value: 'ESP32 DevKit V1' },
                     { label: 'Vibration Sensor', value: 'SW-420' },
                     { label: 'Notification Platform', value: 'Firebase Cloud Messaging (FCM)' },
