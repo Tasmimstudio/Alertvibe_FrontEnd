@@ -6,6 +6,7 @@ import { userApi } from '../services/api';
 import { useToast } from '../components/Toast';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
+import ThemeSwitch from '../components/ThemeSwitch';
 
 const Logo = () => (
   <div className="av-logo">
@@ -129,13 +130,16 @@ export default function Profile() {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-white/60 hover:text-white text-sm font-medium transition-colors px-3 py-2 rounded-lg"
-          style={{ background: 'rgba(255,255,255,0.07)' }}
-        >
-          <BackIcon /> Back
-        </button>
+        <div className="flex items-center gap-3">
+          <ThemeSwitch />
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-white/60 hover:text-white text-sm font-medium transition-colors px-3 py-2 rounded-lg"
+            style={{ background: 'rgba(255,255,255,0.07)' }}
+          >
+            <BackIcon /> Back
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 p-4 sm:p-8 max-w-2xl mx-auto w-full flex flex-col gap-6 mobile-pb">

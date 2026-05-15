@@ -6,6 +6,7 @@ import { motorcycleApi } from '../services/api';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmDialog';
 import BottomNav from '../components/BottomNav';
+import ThemeSwitch from '../components/ThemeSwitch';
 
 const Logo = () => (
   <div className="av-logo">
@@ -262,17 +263,18 @@ function DeviceRegistration() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:block text-right">
-            <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'User'}</p>
+          <ThemeSwitch />
+          <div className="text-right">
+            <p className="text-white text-base font-semibold">{userProfile?.displayName || currentUser?.email || 'User'}</p>
             <p className="text-white/40 text-xs capitalize">{userProfile?.role || 'user'}</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile"
-                   className="w-9 h-9 rounded-full object-cover"
+                   className="w-20 h-20 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }} />
             ) : (
-              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
                    style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
                 {initials}
               </div>

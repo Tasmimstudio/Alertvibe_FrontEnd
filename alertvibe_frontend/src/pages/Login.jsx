@@ -125,8 +125,10 @@ function Login() {
 
           {/* Logo + name */}
           <div className="flex items-center gap-4 mb-5">
-            <div style={{ width: 160, height: 160, borderRadius: 32, overflow: 'hidden', background: 'rgba(255,255,255,0.12)', padding: 10 }}>
-              <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
+            <div style={{ width: 160, height: 160, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)', padding: 4, flexShrink: 0 }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#fff', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
+              </div>
             </div>
             <div>
               <p className="text-white font-black text-2xl tracking-wide leading-none">AlertVibe™</p>

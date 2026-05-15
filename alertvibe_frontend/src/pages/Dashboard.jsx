@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { alertApi, motorcycleApi } from '../services/api';
 import { onMessageListener } from '../services/NotificationService';
 import BottomNav from '../components/BottomNav';
+import ThemeSwitch from '../components/ThemeSwitch';
 import { formatDate } from '../utils/formatDate';
 
 const pendingMotorcycleKey = (uid) => `alertvibe:pendingMotorcycle:${uid}`;
@@ -317,17 +318,18 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:block text-right">
-            <p className="text-white text-sm font-semibold">{displayName}</p>
+          <ThemeSwitch />
+          <div className="text-right">
+            <p className="text-white text-base font-semibold">{displayName}</p>
             <p className="text-white/40 text-xs capitalize">{userProfile?.role || 'user'}</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {photoURL ? (
               <img src={photoURL} alt="Profile"
-                   className="w-10 h-10 rounded-full object-cover"
+                   className="w-20 h-20 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }} />
             ) : (
-              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm"
+              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
                    style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
                 {initials}
               </div>

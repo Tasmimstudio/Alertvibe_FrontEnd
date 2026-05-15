@@ -7,6 +7,8 @@ import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmDialog';
 import BottomNav from '../components/BottomNav';
 import Pagination from '../components/Pagination';
+import ThemeSwitch from '../components/ThemeSwitch';
+import PhotoViewer from '../components/PhotoViewer';
 
 const PAGE_SIZE = 15;
 
@@ -129,6 +131,7 @@ function AdminDashboard() {
   const navigate = useNavigate();
   const { currentUser, userProfile, logout, isAdmin } = useAuth();
   const [stats, setStats] = useState(null);
+  const [viewPhoto, setViewPhoto] = useState(null);
   const [users, setUsers] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -328,6 +331,7 @@ function AdminDashboard() {
   const initials = userProfile?.displayName?.charAt(0)?.toUpperCase() || 'A';
 
   return (
+    <>
     <div className="av-bg av-grid-bg min-h-screen flex flex-col">
 
       {/* Header */}
@@ -343,17 +347,18 @@ function AdminDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            <p className="text-white text-sm font-semibold">{userProfile?.displayName || 'Admin'}</p>
+          <ThemeSwitch />
+          <div className="text-right">
+            <p className="text-white text-base font-semibold">{userProfile?.displayName || 'Admin'}</p>
             <p className="text-purple-400 text-xs font-semibold">Administrator</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile"
-                   className="w-9 h-9 rounded-full object-cover"
+                   className="w-20 h-20 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }} />
             ) : (
-              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
                    style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)', boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }}>
                 {initials}
               </div>
@@ -527,10 +532,13 @@ function AdminDashboard() {
                     {pagedUsers.map((user) => (
                       <tr key={user.id}>
                         <td>
-                          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
-                               style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                          <div
+                            className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', cursor: user.photoURL ? 'zoom-in' : 'default' }}
+                            onClick={() => user.photoURL && setViewPhoto({ src: user.photoURL, alt: user.displayName || user.email })}
+                          >
                             {user.photoURL ? (
-                              <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
+                              <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover hover:scale-110 transition-transform duration-200" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm"
                                    style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)' }}>
@@ -899,6 +907,8 @@ function AdminDashboard() {
         ]}
       />
     </div>
+    {viewPhoto && <PhotoViewer src={viewPhoto.src} alt={viewPhoto.alt} onClose={() => setViewPhoto(null)} />}
+    </>
   );
 }
 
