@@ -301,6 +301,13 @@ export const adminApi = {
     });
   },
 
+  resetUserPassword: async (userId, password) => {
+    return apiRequest(`/admin/users/${userId}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password }),
+    });
+  },
+
   deleteUser: async (userId) => {
     return apiRequest(`/admin/users/${userId}`, {
       method: 'DELETE',
