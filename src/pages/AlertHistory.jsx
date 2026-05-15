@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { alertApi } from '../services/api';
 import BottomNav from '../components/BottomNav';
 import Pagination from '../components/Pagination';
+import ThemeSwitch from '../components/ThemeSwitch';
 import { formatDate } from '../utils/formatDate';
 
 const PAGE_SIZE = 15;
@@ -62,11 +63,16 @@ const AlertHistory = () => {
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState(null);
   const [clearingAll, setClearingAll] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(null);
 
-  useEffect(() => { fetchAlerts(); }, []);
+  useEffect(() => {
+    fetchAlerts();
+    const interval = setInterval(() => fetchAlerts(true), 5000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const fetchAlerts = async () => {
-    setLoading(true);
+  const fetchAlerts = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await alertApi.listAlerts();
       const readIds = getReadIds(currentUser?.uid);
@@ -80,10 +86,11 @@ const AlertHistory = () => {
         _raw: alert.timestamp,
       }));
       setAlerts(formattedAlerts);
+      setLastRefreshed(new Date());
     } catch (error) {
       console.error('Error fetching alerts:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -191,17 +198,18 @@ const AlertHistory = () => {
               style={{ width: 220 }}
             />
           </div>
-          <div className="hidden sm:block text-right">
-            <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'User'}</p>
+          <ThemeSwitch />
+          <div className="text-right">
+            <p className="text-white text-base font-semibold">{userProfile?.displayName || currentUser?.email || 'User'}</p>
             <p className="text-white/40 text-xs capitalize">{userProfile?.role || 'user'}</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile"
-                   className="w-9 h-9 rounded-full object-cover"
+                   className="w-20 h-20 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }} />
             ) : (
-              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
                    style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
                 {initials}
               </div>
@@ -230,7 +238,13 @@ const AlertHistory = () => {
             {/* Table header */}
             <div className="flex items-center justify-between px-6 py-4"
                  style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <h2 className="text-white font-bold text-lg">Alert Log</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-white font-bold text-lg">Alert Log</h2>
+                <span className="flex items-center gap-1 text-green-400 text-xs font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 status-pulse" />
+                  Live
+                </span>
+              </div>
               <div className="flex items-center gap-3">
                 {unreadCount > 0 && (
                   <button

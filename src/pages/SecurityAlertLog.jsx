@@ -8,6 +8,8 @@ import { useConfirm } from '../components/ConfirmDialog';
 import BottomNav from '../components/BottomNav';
 import Pagination from '../components/Pagination';
 import { formatDate } from '../utils/formatDate';
+import ThemeSwitch from '../components/ThemeSwitch';
+import PhotoViewer from '../components/PhotoViewer';
 
 const PAGE_SIZE = 15;
 
@@ -44,15 +46,21 @@ function SecurityAlertLog() {
   const [filter, setFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [selectedAlert, setSelectedAlert] = useState(null);
+  const [viewPhoto, setViewPhoto] = useState(null);
   const [responseNotes, setResponseNotes] = useState('');
   const [responding, setResponding] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(null);
   const toast = useToast();
   const confirm = useConfirm();
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(() => fetchData(true), 5000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [alertsData, motorcyclesData] = await Promise.all([
         securityApi.getAlerts(),
@@ -65,6 +73,7 @@ function SecurityAlertLog() {
           ownerName: m.ownerName || 'Unknown',
           ownerPhone: m.ownerPhone || null,
           ownerEmail: m.ownerEmail || null,
+          ownerPhotoURL: m.ownerPhotoURL || null,
           plateNumber: m.plateNumber || '',
         };
       });
@@ -91,14 +100,16 @@ function SecurityAlertLog() {
           ownerName: ownerInfo.ownerName || 'Unknown',
           ownerPhone: ownerInfo.ownerPhone || null,
           ownerEmail: ownerInfo.ownerEmail || null,
+          ownerPhotoURL: ownerInfo.ownerPhotoURL || null,
           plateNumber: ownerInfo.plateNumber || '',
         };
       });
       setAlerts(formattedAlerts);
+      setLastRefreshed(new Date());
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -178,6 +189,7 @@ function SecurityAlertLog() {
   const initials = userProfile?.displayName?.charAt(0)?.toUpperCase() || currentUser?.displayName?.charAt(0)?.toUpperCase() || 'S';
 
   return (
+    <>
     <div className="av-bg av-grid-bg h-screen overflow-hidden flex flex-col" style={{ minHeight: '100dvh' }}>
 
       {/* Header */}
@@ -193,17 +205,18 @@ function SecurityAlertLog() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:block text-right">
-            <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
+          <ThemeSwitch />
+          <div className="text-right">
+            <p className="text-white text-base font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
             <p className="text-amber-400 text-xs font-semibold">Security</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile"
-                   className="w-9 h-9 rounded-full object-cover"
+                   className="w-20 h-20 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
             ) : (
-              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
                    style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
                 {initials}
               </div>
@@ -244,6 +257,15 @@ function SecurityAlertLog() {
         {/* Main */}
         <main className="flex-1 p-4 sm:p-6 min-w-0 mobile-pb overflow-y-auto">
           <div className="glass h-full p-6 flex flex-col gap-5">
+
+            {/* Live indicator */}
+            <div className="flex items-center gap-2">
+              <h2 className="text-white font-bold text-lg">Security Alert Log</h2>
+              <span className="flex items-center gap-1 text-green-400 text-xs font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 status-pulse" />
+                Live
+              </span>
+            </div>
 
             {/* Controls */}
             <div className="flex flex-wrap items-center gap-3">
@@ -330,8 +352,11 @@ function SecurityAlertLog() {
                         <td>
                           {alertItem.ownerPhone ? (
                             <a href={`tel:${alertItem.ownerPhone}`} onClick={(e) => e.stopPropagation()}
-                               className="badge badge-green hover:opacity-80 transition-opacity">
-                              📞 Call
+                               className="badge badge-green hover:opacity-80 transition-opacity inline-flex items-center gap-1">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
+                              </svg>
+                              Call
                             </a>
                           ) : <span className="text-white/25 text-xs">N/A</span>}
                         </td>
@@ -415,24 +440,54 @@ function SecurityAlertLog() {
               </div>
 
               {/* Owner contact */}
-              <div className="rounded-xl p-4" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
-                <p className="text-amber-400 text-xs uppercase tracking-wider font-bold mb-2">Owner Contact</p>
-                <p className="text-white font-bold mb-2">{selectedAlert.ownerName}</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedAlert.ownerPhone ? (
-                    <a href={`tel:${selectedAlert.ownerPhone}`}
-                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-80 transition-all"
-                       style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
-                      📞 Call {selectedAlert.ownerPhone}
-                    </a>
-                  ) : <span className="text-white/30 text-sm">No phone number</span>}
-                  {selectedAlert.ownerEmail && (
-                    <a href={`mailto:${selectedAlert.ownerEmail}`}
-                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-80 transition-all"
-                       style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
-                      ✉️ Email
-                    </a>
-                  )}
+              <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                {selectedAlert.ownerPhotoURL ? (
+                  <img src={selectedAlert.ownerPhotoURL} alt={selectedAlert.ownerName}
+                       className="w-full object-cover cursor-zoom-in hover:brightness-110 transition-all duration-200"
+                       style={{ height: 220, borderBottom: '2px solid rgba(251,191,36,0.3)' }}
+                       onClick={() => setViewPhoto({ src: selectedAlert.ownerPhotoURL, alt: selectedAlert.ownerName })} />
+                ) : (
+                  <div className="w-full flex items-center justify-center font-black text-white"
+                       style={{ height: 220, fontSize: 80, background: 'linear-gradient(135deg,#f59e0b,#d97706)', borderBottom: '2px solid rgba(251,191,36,0.3)' }}>
+                    {selectedAlert.ownerName?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-amber-400 text-xs uppercase tracking-wider font-bold mb-2">Owner Information</p>
+                  <p className="text-white font-bold text-lg mb-3">{selectedAlert.ownerName}</p>
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-white/40 w-12 flex-shrink-0">Phone</span>
+                      {selectedAlert.ownerPhone
+                        ? <span className="text-white font-medium">{selectedAlert.ownerPhone}</span>
+                        : <span className="text-white/25 italic">Not provided</span>}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-white/40 w-12 flex-shrink-0">Email</span>
+                      {selectedAlert.ownerEmail
+                        ? <span className="text-indigo-300 font-medium">{selectedAlert.ownerEmail}</span>
+                        : <span className="text-white/25 italic">Not provided</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAlert.ownerPhone ? (
+                      <a href={`tel:${selectedAlert.ownerPhone}`}
+                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-80 transition-all"
+                         style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
+                        </svg>
+                        Call
+                      </a>
+                    ) : <span className="text-white/30 text-sm">No phone number</span>}
+                    {selectedAlert.ownerEmail && (
+                      <a href={`mailto:${selectedAlert.ownerEmail}`}
+                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-80 transition-all"
+                         style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
+                        ✉️ Email
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -491,6 +546,8 @@ function SecurityAlertLog() {
         </div>
       )}
     </div>
+    {viewPhoto && <PhotoViewer src={viewPhoto.src} alt={viewPhoto.alt} onClose={() => setViewPhoto(null)} />}
+    </>
   );
 }
 

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { securityApi } from '../services/api';
 import BottomNav from '../components/BottomNav';
+import ThemeSwitch from '../components/ThemeSwitch';
+import PhotoViewer from '../components/PhotoViewer';
 
 const Logo = () => (
   <div className="av-logo">
@@ -23,6 +25,7 @@ function SecurityDashboard() {
   const [motorcycles, setMotorcycles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMotorcycle, setSelectedMotorcycle] = useState(null);
+  const [viewPhoto, setViewPhoto] = useState(null);
   const [unrespondedCount, setUnrespondedCount] = useState(0);
 
   useEffect(() => { fetchMotorcycles(); fetchUnrespondedCount(); }, []);
@@ -89,6 +92,7 @@ function SecurityDashboard() {
   const initials = userProfile?.displayName?.charAt(0)?.toUpperCase() || currentUser?.displayName?.charAt(0)?.toUpperCase() || 'S';
 
   return (
+    <>
     <div className="av-bg av-grid-bg min-h-screen flex flex-col">
 
       {/* Header */}
@@ -104,17 +108,18 @@ function SecurityDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden sm:block text-right">
-            <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
+          <ThemeSwitch />
+          <div className="text-right">
+            <p className="text-white text-base font-semibold">{userProfile?.displayName || currentUser?.email || 'Security'}</p>
             <p className="text-amber-400 text-xs font-semibold">Security</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile"
-                   className="w-9 h-9 rounded-full object-cover"
+                   className="w-20 h-20 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }} />
             ) : (
-              <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
                    style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 2px 8px rgba(245,158,11,0.4)' }}>
                 {initials}
               </div>
@@ -230,8 +235,11 @@ function SecurityDashboard() {
                         <td>
                           {m.ownerPhone ? (
                             <a href={`tel:${m.ownerPhone}`} onClick={(e) => e.stopPropagation()}
-                               className="badge badge-blue hover:opacity-80 transition-opacity">
-                              📞 {m.ownerPhone}
+                               className="badge badge-blue hover:opacity-80 transition-opacity inline-flex items-center gap-1">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
+                              </svg>
+                              {m.ownerPhone}
                             </a>
                           ) : <span className="text-white/25 text-xs">N/A</span>}
                         </td>
@@ -290,9 +298,10 @@ function SecurityDashboard() {
             <div className="p-6 space-y-5">
               {/* Photo */}
               {selectedMotorcycle.photoURL ? (
-                <div className="w-full rounded-xl overflow-hidden" style={{ maxHeight: 280 }}>
+                <div className="w-full rounded-xl overflow-hidden cursor-zoom-in" style={{ maxHeight: 280 }}
+                     onClick={() => setViewPhoto({ src: selectedMotorcycle.photoURL, alt: selectedMotorcycle.model })}>
                   <img src={selectedMotorcycle.photoURL} alt={selectedMotorcycle.model}
-                       className="w-full h-full object-contain" style={{ maxHeight: 280 }} />
+                       className="w-full h-full object-contain hover:scale-105 transition-transform duration-200" style={{ maxHeight: 280 }} />
                 </div>
               ) : (
                 <div className="w-full h-40 rounded-xl flex flex-col items-center justify-center gap-2"
@@ -351,22 +360,23 @@ function SecurityDashboard() {
               </div>
 
               {/* Owner contact */}
-              <div className="rounded-xl p-4" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
-                <p className="text-amber-400 text-xs uppercase tracking-wider font-bold mb-3">Owner Information</p>
-                <div className="flex items-center gap-3 mb-3">
-                  {selectedMotorcycle.ownerPhotoURL ? (
-                    <img src={selectedMotorcycle.ownerPhotoURL} alt={selectedMotorcycle.owner}
-                         className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                         style={{ border: '2px solid rgba(251,191,36,0.4)' }} />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-lg flex-shrink-0"
-                         style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
-                      {selectedMotorcycle.owner?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                  )}
-                  <p className="text-white font-bold text-lg">{selectedMotorcycle.owner}</p>
-                </div>
-                <div className="space-y-2 mb-3">
+              <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+                {/* Full-width profile photo */}
+                {selectedMotorcycle.ownerPhotoURL ? (
+                  <img src={selectedMotorcycle.ownerPhotoURL} alt={selectedMotorcycle.owner}
+                       className="w-full object-cover cursor-zoom-in hover:brightness-110 transition-all duration-200"
+                       style={{ height: 220, borderBottom: '2px solid rgba(251,191,36,0.3)' }}
+                       onClick={() => setViewPhoto({ src: selectedMotorcycle.ownerPhotoURL, alt: selectedMotorcycle.owner })} />
+                ) : (
+                  <div className="w-full flex items-center justify-center font-black text-white"
+                       style={{ height: 220, fontSize: 80, background: 'linear-gradient(135deg,#f59e0b,#d97706)', borderBottom: '2px solid rgba(251,191,36,0.3)' }}>
+                    {selectedMotorcycle.owner?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-amber-400 text-xs uppercase tracking-wider font-bold mb-2">Owner Information</p>
+                  <p className="text-white font-bold text-lg mb-3">{selectedMotorcycle.owner}</p>
+                  <div className="space-y-2 mb-3">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-white/40 w-12 flex-shrink-0">Email</span>
                     {selectedMotorcycle.ownerEmail
@@ -385,7 +395,10 @@ function SecurityDashboard() {
                     <a href={`tel:${selectedMotorcycle.ownerPhone}`}
                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-80"
                        style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
-                      📞 Call
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
+                      </svg>
+                      Call
                     </a>
                   )}
                   {selectedMotorcycle.ownerEmail && (
@@ -399,6 +412,7 @@ function SecurityDashboard() {
                     <span className="text-white/30 text-sm">No contact info available</span>
                   )}
                 </div>
+                </div>
               </div>
 
               <button onClick={() => setSelectedMotorcycle(null)}
@@ -411,6 +425,8 @@ function SecurityDashboard() {
         </div>
       )}
     </div>
+    {viewPhoto && <PhotoViewer src={viewPhoto.src} alt={viewPhoto.alt} onClose={() => setViewPhoto(null)} />}
+    </>
   );
 }
 
