@@ -187,7 +187,7 @@ const AlertHistory = () => {
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search alerts…"
-              className="av-input pl-9 py-2 text-sm"
+              className="av-input !pl-9 py-2 text-sm"
               style={{ width: 220 }}
             />
           </div>

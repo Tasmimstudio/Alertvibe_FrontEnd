@@ -503,7 +503,7 @@ function AdminDashboard() {
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); setUsersPage(1); }}
                     placeholder="Search users…"
-                    className="av-input pl-9 py-2 text-sm"
+                    className="av-input !pl-9 py-2 text-sm"
                     style={{ width: 220 }}
                   />
                 </div>

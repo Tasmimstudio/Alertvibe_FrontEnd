@@ -126,6 +126,11 @@ header {
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
+/* Hide browser's native password-reveal eye so only our custom toggle shows */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display: none; }
+input[type="password"]::-webkit-credentials-auto-fill-button { display: none !important; }
+
 /* ─── Buttons ───────────────────────────────────── */
 .btn-red {
   padding: 12px 28px;

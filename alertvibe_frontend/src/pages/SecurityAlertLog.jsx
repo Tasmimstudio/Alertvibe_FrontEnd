@@ -259,7 +259,7 @@ function SecurityAlertLog() {
                   value={searchPlate}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search by device ID or plate…"
-                  className="av-input pl-9"
+                  className="av-input !pl-9"
                 />
               </div>
 

@@ -169,7 +169,7 @@ function SecurityDashboard() {
                   value={searchPlate}
                   onChange={(e) => setSearchPlate(e.target.value)}
                   placeholder="Search by plate, owner, or device code…"
-                  className="av-input pl-9"
+                  className="av-input !pl-9"
                 />
               </div>
               <span className="badge badge-yellow">{filteredMotorcycles.length} motorcycles</span>
