@@ -131,10 +131,10 @@ function Registration() {
     <div className="av-bg av-grid-bg min-h-screen flex items-center justify-center relative overflow-hidden py-8">
 
       {/* Blobs */}
-      <div className="absolute top-[-60px] right-[-60px] w-64 h-64 rounded-full opacity-10"
-           style={{ background: 'radial-gradient(circle,#dc2626,transparent)' }} />
-      <div className="absolute bottom-[-60px] left-[-60px] w-64 h-64 rounded-full opacity-10"
-           style={{ background: 'radial-gradient(circle,#0891b2,transparent)' }} />
+      <div className="absolute top-[-60px] right-[-60px] w-64 h-64 rounded-full opacity-15"
+           style={{ background: 'radial-gradient(circle,#06b6d4,transparent)' }} />
+      <div className="absolute bottom-[-60px] left-[-60px] w-64 h-64 rounded-full opacity-15"
+           style={{ background: 'radial-gradient(circle,#7c3aed,transparent)' }} />
 
       {/* Card */}
       <div className="glass relative z-10 w-full max-w-md mx-6 px-8 py-8"

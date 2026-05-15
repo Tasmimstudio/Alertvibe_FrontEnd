@@ -192,6 +192,7 @@ function SecurityDashboard() {
                     <tr>
                       <th>Photo</th>
                       <th>Owner</th>
+                      <th>Email</th>
                       <th>Phone</th>
                       <th>Plate</th>
                       <th>Model</th>
@@ -217,6 +218,14 @@ function SecurityDashboard() {
                           </div>
                         </td>
                         <td className="font-semibold text-white">{m.owner}</td>
+                        <td>
+                          {m.ownerEmail ? (
+                            <a href={`mailto:${m.ownerEmail}`} onClick={(e) => e.stopPropagation()}
+                               className="text-indigo-400 hover:text-indigo-300 text-xs transition-colors">
+                              {m.ownerEmail}
+                            </a>
+                          ) : <span className="text-white/25 text-xs">N/A</span>}
+                        </td>
                         <td>
                           {m.ownerPhone ? (
                             <a href={`tel:${m.ownerPhone}`} onClick={(e) => e.stopPropagation()}
@@ -344,20 +353,37 @@ function SecurityDashboard() {
               <div className="rounded-xl p-4" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
                 <p className="text-amber-400 text-xs uppercase tracking-wider font-bold mb-3">Owner Information</p>
                 <p className="text-white font-bold text-lg mb-3">{selectedMotorcycle.owner}</p>
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-white/40 w-12 flex-shrink-0">Email</span>
+                    {selectedMotorcycle.ownerEmail
+                      ? <span className="text-indigo-300 font-medium">{selectedMotorcycle.ownerEmail}</span>
+                      : <span className="text-white/25 italic">Not provided</span>}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-white/40 w-12 flex-shrink-0">Phone</span>
+                    {selectedMotorcycle.ownerPhone
+                      ? <span className="text-white font-medium">{selectedMotorcycle.ownerPhone}</span>
+                      : <span className="text-white/25 italic">Not provided</span>}
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {selectedMotorcycle.ownerPhone ? (
+                  {selectedMotorcycle.ownerPhone && (
                     <a href={`tel:${selectedMotorcycle.ownerPhone}`}
                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-80"
                        style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
-                      📞 Call {selectedMotorcycle.ownerPhone}
+                      📞 Call
                     </a>
-                  ) : <span className="text-white/30 text-sm">No phone number</span>}
+                  )}
                   {selectedMotorcycle.ownerEmail && (
                     <a href={`mailto:${selectedMotorcycle.ownerEmail}`}
                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-80"
                        style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}>
                       ✉️ Email
                     </a>
+                  )}
+                  {!selectedMotorcycle.ownerPhone && !selectedMotorcycle.ownerEmail && (
+                    <span className="text-white/30 text-sm">No contact info available</span>
                   )}
                 </div>
               </div>
