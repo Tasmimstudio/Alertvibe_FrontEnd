@@ -145,6 +145,9 @@ function AdminDashboard() {
   const [modelSaving, setModelSaving] = useState(false);
   const [editingModelId, setEditingModelId] = useState(null);
   const [editingModelName, setEditingModelName] = useState('');
+  const [pwModal, setPwModal] = useState(null); // { userId, displayName }
+  const [newPw, setNewPw] = useState('');
+  const [savingPw, setSavingPw] = useState(false);
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -202,6 +205,22 @@ function AdminDashboard() {
     } catch (error) {
       fetchData();
       toast('Failed to update status: ' + error.message, 'error');
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!newPw || newPw.length < 6) { toast('Password must be at least 6 characters.', 'warning'); return; }
+    setSavingPw(true);
+    try {
+      await adminApi.resetUserPassword(pwModal.userId, newPw);
+      toast(`Password updated for ${pwModal.displayName || 'user'}.`, 'success');
+      setPwModal(null);
+      setNewPw('');
+    } catch (err) {
+      toast('Failed to update password: ' + err.message, 'error');
+    } finally {
+      setSavingPw(false);
     }
   };
 
@@ -536,7 +555,7 @@ function AdminDashboard() {
                           </span>
                         </td>
                         <td>
-                          <div className="flex justify-center gap-1.5">
+                          <div className="flex justify-center gap-1.5 flex-wrap">
                             <button
                               onClick={() => handleToggleStatus(user.id, user.active === false)}
                               disabled={user.id === currentUser?.uid}
@@ -544,6 +563,14 @@ function AdminDashboard() {
                               style={{ background: user.active !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
                             >
                               {user.active !== false ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button
+                              onClick={() => { setPwModal({ userId: user.id, displayName: user.displayName || user.email }); setNewPw(''); }}
+                              className="px-3 py-1 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
+                              style={{ background: 'rgba(99,102,241,0.7)' }}
+                              title="Change password"
+                            >
+                              Pwd
                             </button>
                             <button
                               onClick={() => handleDeleteUser(user.id)}
@@ -786,6 +813,58 @@ function AdminDashboard() {
           )}
         </main>
       </div>
+
+      {/* Password Reset Modal */}
+      {pwModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+             onClick={() => setPwModal(null)}>
+          <div className="glass w-full max-w-sm"
+               style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}
+               onClick={e => e.stopPropagation()}>
+
+            <div className="flex items-center justify-between px-6 py-4"
+                 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <div>
+                <h2 className="text-white font-bold text-base">Change Password</h2>
+                <p className="text-white/45 text-xs mt-0.5 truncate max-w-[220px]">{pwModal.displayName}</p>
+              </div>
+              <button onClick={() => setPwModal(null)}
+                      className="text-white/40 hover:text-white/80 text-2xl leading-none transition-colors">&times;</button>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="p-6 space-y-4">
+              <div>
+                <label className="block text-white/55 text-xs uppercase tracking-wider font-semibold mb-1.5">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  className="av-input"
+                  placeholder="Min 6 characters"
+                  value={newPw}
+                  onChange={e => setNewPw(e.target.value)}
+                  minLength={6}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setPwModal(null)}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white transition-all"
+                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={savingPw}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 transition-all hover:-translate-y-px"
+                        style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}>
+                  {savingPw ? 'Saving…' : 'Update Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Mobile bottom nav — maps sidebar tabs to icons */}
       <BottomNav
