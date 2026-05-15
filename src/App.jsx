@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { ToastProvider } from './components/Toast';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import Dashboard from './pages/Dashboard';
@@ -60,6 +61,25 @@ function ProtectedRoute({ children, requiredRole }) {
   return children;
 }
 
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  return (
+    <button
+      onClick={toggle}
+      title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+      className="fixed bottom-20 right-4 md:bottom-6 z-50 w-10 h-10 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95"
+      style={{
+        background: theme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(30,41,59,0.1)',
+        border: theme === 'dark' ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(30,41,59,0.15)',
+        backdropFilter: 'blur(8px)',
+        fontSize: 18,
+      }}
+    >
+      {theme === 'dark' ? '☀️' : '🌙'}
+    </button>
+  );
+}
+
 function AppContent() {
   const { currentUser } = useAuth();
 
@@ -72,6 +92,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen">
+      <ThemeToggle />
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
@@ -98,13 +119,15 @@ function AppContent() {
 function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <ToastProvider>
-        <ConfirmProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </ConfirmProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </ConfirmProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </Router>
   );
 }
