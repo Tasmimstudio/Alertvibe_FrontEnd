@@ -15,6 +15,26 @@ const getReadIds = (uid) => {
   } catch { return new Set(); }
 };
 
+const TEN_MIN_MS = 10 * 60 * 1000;
+
+const buildActiveGroup = (alertList) => {
+  if (!alertList.length) return null;
+  const latest = alertList[0];
+  const latestMs = latest.timestampMs || 0;
+  if (!latestMs || Date.now() - latestMs > TEN_MIN_MS) return null;
+  const count = alertList.filter(a => a.timestampMs && latestMs - a.timestampMs <= TEN_MIN_MS).length;
+  return { latest, count, expiresAt: latestMs + TEN_MIN_MS };
+};
+
+const formatTimeAgo = (ms) => {
+  if (!ms) return 'some time ago';
+  const diff = Date.now() - ms;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
+};
+
 /* ── Icons ──────────────────────────────────────── */
 const HomeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -83,6 +103,7 @@ const Dashboard = () => {
   const [wifiSaving, setWifiSaving] = useState(false);
   const [wifiStatus, setWifiStatus] = useState(null);
   const [foregroundAlert, setForegroundAlert] = useState(null); // { title, body }
+  const [tick, setTick] = useState(0); // increments every 30s to refresh activeGroup
 
   useEffect(() => {
   if (!currentUser?.uid) return;
@@ -102,16 +123,24 @@ const Dashboard = () => {
     return () => clearInterval(id);
   }, [currentUser]);
 
+  // Tick every 30 s so the active-alert countdown re-evaluates
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   // Recursive listener — re-subscribes after every message so no notifications are missed
   const setupMessageListener = () => {
     onMessageListener()
       .then((payload) => {
+        const nowMs = Date.now();
         const newAlert = {
-          id: Date.now(),
+          id: nowMs,
           date: formatDate(new Date(), 'date'),
           message: payload.notification?.body || 'New alert received',
           severity: payload.data?.severity || 'medium',
           isRead: false,
+          timestampMs: nowMs,
         };
         setAlerts(prev => [newAlert, ...prev]);
 
@@ -141,6 +170,9 @@ const Dashboard = () => {
         deviceId: alert.deviceId,
         severity: alert.severity,
         isRead: alert.responded || readIds.has(alert.id),
+        timestampMs: alert.timestamp?._seconds
+          ? alert.timestamp._seconds * 1000
+          : alert.timestamp ? new Date(alert.timestamp).getTime() : 0,
       }));
       setAlerts(formattedAlerts);
 
@@ -371,34 +403,80 @@ const Dashboard = () => {
               </div>
             ) : (
               <>
-                {/* Last Alert */}
-                {activeTab === 'lastAlert' && (
-                  <div className="space-y-3">
-                    <h2 className="text-white font-bold text-lg mb-4">Recent Alerts</h2>
-                    {alerts.length > 0 ? alerts.slice(0, 5).map((alert) => (
-                      <div key={alert.id} className="alert-card"
-                           style={{ borderLeftColor: severityColor(alert.severity) }}>
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="text-white/90 text-sm leading-relaxed">{alert.message}</p>
-                            <p className="text-white/35 text-xs mt-1">{alert.date}</p>
+                {/* Last Alert — single pulse card */}
+                {activeTab === 'lastAlert' && (() => {
+                  void tick; // consumed so re-render fires every 30 s
+                  const activeGroup = buildActiveGroup(alerts);
+                  const minsLeft = activeGroup ? Math.max(0, Math.ceil((activeGroup.expiresAt - Date.now()) / 60000)) : 0;
+                  return (
+                    <div className="space-y-4">
+                      <h2 className="text-white font-bold text-lg">Alert Status</h2>
+
+                      {activeGroup ? (
+                        /* ── Active tampering alert ── */
+                        <div className="relative rounded-2xl p-5 overflow-hidden"
+                             style={{
+                               background: 'linear-gradient(135deg,rgba(239,68,68,0.12),rgba(220,38,38,0.07))',
+                               border: '1px solid rgba(239,68,68,0.4)',
+                               boxShadow: '0 0 40px rgba(239,68,68,0.12)',
+                             }}>
+                          {/* Pulsing dot */}
+                          <div className="absolute top-5 right-5 flex items-center justify-center">
+                            <span className="absolute w-12 h-12 rounded-full animate-ping"
+                                  style={{ background: 'rgba(239,68,68,0.2)' }} />
+                            <span className="relative w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-black shadow-lg">!</span>
                           </div>
-                          {alert.severity && (
-                            <span className={`badge flex-shrink-0 ${
-                              alert.severity === 'high' ? 'badge-red'
-                                : alert.severity === 'medium' ? 'badge-yellow' : 'badge-blue'
-                            }`}>{alert.severity}</span>
+
+                          <div className="pr-16">
+                            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                              <span className="text-2xl">🚨</span>
+                              <span className={`badge ${
+                                activeGroup.latest.severity === 'high' ? 'badge-red'
+                                  : activeGroup.latest.severity === 'medium' ? 'badge-yellow'
+                                  : 'badge-blue'
+                              }`}>
+                                {(activeGroup.latest.severity || 'alert').toUpperCase()}
+                              </span>
+                              {activeGroup.count > 1 && (
+                                <span className="badge badge-yellow">{activeGroup.count} pulses</span>
+                              )}
+                            </div>
+                            <p className="text-white font-bold text-sm leading-snug mb-2">{activeGroup.latest.message}</p>
+                            <p className="text-white/45 text-xs">Device: {activeGroup.latest.deviceId || 'Unknown'}</p>
+                            <p className="text-white/35 text-xs mt-1">
+                              Last pulse: {activeGroup.latest.date} · Auto-clears in {minsLeft} min
+                            </p>
+                          </div>
+
+                          <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(239,68,68,0.2)' }}>
+                            <button onClick={() => navigate('/history')}
+                                    className="text-red-400 hover:text-red-300 text-xs font-semibold transition-colors">
+                              View full alert log →
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* ── Secure / clear state ── */
+                        <div className="rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center"
+                             style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)' }}>
+                          <span className="text-5xl">✅</span>
+                          <p className="text-green-400 font-black text-xl">Motorcycle Secure</p>
+                          <p className="text-white/40 text-sm">
+                            {alerts.length > 0
+                              ? `Last alert was ${formatTimeAgo(alerts[0].timestampMs)} — no active threat`
+                              : 'No alerts recorded yet.'}
+                          </p>
+                          {alerts.length > 0 && (
+                            <button onClick={() => navigate('/history')}
+                                    className="text-white/30 hover:text-white/60 text-xs transition-colors mt-1">
+                              View alert history →
+                            </button>
                           )}
                         </div>
-                      </div>
-                    )) : (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3">
-                        <span className="text-4xl">✅</span>
-                        <p className="text-white/50 text-sm">No alerts yet — your motorcycle is safe!</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Motorcycle Info */}
                 {activeTab === 'motorcycleInfo' && (
