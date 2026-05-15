@@ -50,6 +50,7 @@ function SecurityDashboard() {
         deviceCode: m.deviceCode || '',
         department: m.department || null,
         photoURL: m.photoURL || null,
+        ownerPhotoURL: m.ownerPhotoURL || null,
         ownerPhone: m.ownerPhone || null,
         ownerEmail: m.ownerEmail || null,
         status: m.status || 'active',
@@ -352,7 +353,19 @@ function SecurityDashboard() {
               {/* Owner contact */}
               <div className="rounded-xl p-4" style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
                 <p className="text-amber-400 text-xs uppercase tracking-wider font-bold mb-3">Owner Information</p>
-                <p className="text-white font-bold text-lg mb-3">{selectedMotorcycle.owner}</p>
+                <div className="flex items-center gap-3 mb-3">
+                  {selectedMotorcycle.ownerPhotoURL ? (
+                    <img src={selectedMotorcycle.ownerPhotoURL} alt={selectedMotorcycle.owner}
+                         className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                         style={{ border: '2px solid rgba(251,191,36,0.4)' }} />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-lg flex-shrink-0"
+                         style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
+                      {selectedMotorcycle.owner?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                  <p className="text-white font-bold text-lg">{selectedMotorcycle.owner}</p>
+                </div>
                 <div className="space-y-2 mb-3">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-white/40 w-12 flex-shrink-0">Email</span>
