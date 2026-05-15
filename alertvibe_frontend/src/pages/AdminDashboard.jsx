@@ -496,6 +496,7 @@ function AdminDashboard() {
                     <tr>
                       <th className="text-left">Name</th>
                       <th className="text-left">Email</th>
+                      <th className="text-left">Phone</th>
                       <th className="text-left">Motorcycle</th>
                       <th className="text-left">Role</th>
                       <th className="text-left">Status</th>
@@ -507,6 +508,7 @@ function AdminDashboard() {
                       <tr key={user.id}>
                         <td className="font-semibold text-white">{user.displayName || 'N/A'}</td>
                         <td className="text-white/60 text-sm">{user.email}</td>
+                        <td className="text-white/60 text-sm">{user.phoneNumber || <span className="text-white/25">—</span>}</td>
                         <td className="text-white/70 text-sm">
                           {user.motorcycle ? (
                             <div>

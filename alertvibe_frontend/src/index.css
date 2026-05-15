@@ -14,9 +14,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Default white text so nothing disappears on dark backgrounds */
   color: rgba(255, 255, 255, 0.85);
-  background: #0d1b2a;
+  background: #12103a;
 }
 
 code {
@@ -26,28 +25,28 @@ code {
 /* ─── Scrollbar ─────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.35); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.55); }
 
 /* ─── Background ────────────────────────────────── */
 .av-bg {
-  background: linear-gradient(135deg, #0d1b2a 0%, #162032 50%, #0c2040 100%);
+  background: linear-gradient(135deg, #12103a 0%, #1a1248 50%, #130e2e 100%);
   min-height: 100vh;
   color: rgba(255, 255, 255, 0.85);
 }
 .av-grid-bg {
   background-image:
-    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    linear-gradient(rgba(139,92,246,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139,92,246,0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
 /* ─── Glass Cards ───────────────────────────────── */
 .glass {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.055);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.18);
   border-radius: 16px;
   color: rgba(255, 255, 255, 0.85);
 }
@@ -87,16 +86,16 @@ header {
   cursor: pointer;
 }
 .sb-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(139, 92, 246, 0.12);
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(139, 92, 246, 0.2);
   transform: translateX(3px);
 }
 .sb-btn.sb-active {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
   color: #fff;
-  border-color: rgba(220, 38, 38, 0.5);
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+  border-color: rgba(6, 182, 212, 0.5);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
   transform: none;
 }
 .sb-btn.sb-logout {
@@ -113,18 +112,18 @@ header {
   width: 100%;
   padding: 13px 18px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
   color: #fff;
   font-size: 15px;
   transition: all 0.2s ease;
   outline: none;
 }
-.av-input::placeholder { color: rgba(255, 255, 255, 0.38); }
+.av-input::placeholder { color: rgba(255, 255, 255, 0.35); }
 .av-input:focus {
-  background: rgba(255, 255, 255, 0.11);
-  border-color: rgba(220, 38, 38, 0.6);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14);
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(124, 58, 237, 0.7);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
 /* ─── Buttons ───────────────────────────────────── */
@@ -135,13 +134,13 @@ header {
   font-size: 14px;
   letter-spacing: 0.04em;
   color: #fff;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+  background: linear-gradient(135deg, #22d3ee, #06b6d4);
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.4);
   transition: all 0.2s ease;
   border: none;
   cursor: pointer;
 }
-.btn-red:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(220,38,38,0.5); }
+.btn-red:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(6,182,212,0.5); }
 .btn-red:active { transform: translateY(0); }
 .btn-red:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
@@ -193,21 +192,21 @@ header {
   font-size: 13px;
   letter-spacing: 0.04em;
   color: rgba(255,255,255,0.55);
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(139,92,246,0.08);
+  border: 1px solid rgba(139,92,246,0.15);
   transition: all 0.2s ease;
   cursor: pointer;
   white-space: nowrap;
 }
 .tab-pill:hover {
   color: rgba(255,255,255,0.85);
-  background: rgba(255,255,255,0.1);
+  background: rgba(139,92,246,0.14);
 }
 .tab-pill.tab-active {
   color: #fff;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  border-color: rgba(220,38,38,0.5);
-  box-shadow: 0 4px 12px rgba(220,38,38,0.35);
+  background: linear-gradient(135deg, #22d3ee, #06b6d4);
+  border-color: rgba(6,182,212,0.5);
+  box-shadow: 0 4px 12px rgba(6,182,212,0.35);
 }
 
 /* ─── Badge ─────────────────────────────────────── */
@@ -220,22 +219,23 @@ header {
   font-weight: 700;
   letter-spacing: 0.06em;
 }
-.badge-green { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
-.badge-red { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
-.badge-yellow { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
-.badge-blue { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
-.badge-purple { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+.badge-green  { background: rgba(74,222,128,0.15);  color: #4ade80;  border: 1px solid rgba(74,222,128,0.3); }
+.badge-red    { background: rgba(248,113,113,0.15); color: #f87171;  border: 1px solid rgba(248,113,113,0.3); }
+.badge-yellow { background: rgba(251,191,36,0.15);  color: #fbbf24;  border: 1px solid rgba(251,191,36,0.3); }
+.badge-blue   { background: rgba(96,165,250,0.15);  color: #60a5fa;  border: 1px solid rgba(96,165,250,0.3); }
+.badge-purple { background: rgba(167,139,250,0.15); color: #a78bfa;  border: 1px solid rgba(167,139,250,0.3); }
+.badge-cyan   { background: rgba(34,211,238,0.15);  color: #22d3ee;  border: 1px solid rgba(34,211,238,0.3); }
 
 /* ─── Alert Card ────────────────────────────────── */
 .alert-card {
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-left: 4px solid #ef4444;
+  border: 1px solid rgba(139,92,246,0.15);
+  border-left: 4px solid #06b6d4;
   border-radius: 12px;
   padding: 16px 20px;
   transition: background 0.2s;
 }
-.alert-card:hover { background: rgba(255,255,255,0.07); }
+.alert-card:hover { background: rgba(139,92,246,0.07); }
 
 /* ─── Logo ──────────────────────────────────────── */
 .av-logo {
@@ -258,8 +258,8 @@ header {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255,255,255,0.7);
-  background: rgba(255,255,255,0.06);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  background: rgba(139,92,246,0.1);
+  border-bottom: 1px solid rgba(139,92,246,0.2);
 }
 .av-table th:first-child { border-radius: 12px 0 0 0; }
 .av-table th:last-child { border-radius: 0 12px 0 0; }
@@ -267,10 +267,10 @@ header {
   padding: 13px 18px;
   font-size: 14px;
   color: rgba(255,255,255,0.8);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(139,92,246,0.08);
 }
 .av-table tr:last-child td { border-bottom: none; }
-.av-table tr:hover td { background: rgba(255,255,255,0.04); }
+.av-table tr:hover td { background: rgba(139,92,246,0.06); }
 
 /* ─── Spin loader ───────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -278,8 +278,8 @@ header {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.1);
-  border-top-color: #ef4444;
+  border: 3px solid rgba(139,92,246,0.15);
+  border-top-color: #06b6d4;
   animation: spin 0.8s linear infinite;
 }
 
@@ -313,9 +313,9 @@ header {
   border-radius: 10px;
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0.05) 25%,
-    rgba(255,255,255,0.11) 50%,
-    rgba(255,255,255,0.05) 75%
+    rgba(139,92,246,0.06) 25%,
+    rgba(139,92,246,0.14) 50%,
+    rgba(139,92,246,0.06) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;

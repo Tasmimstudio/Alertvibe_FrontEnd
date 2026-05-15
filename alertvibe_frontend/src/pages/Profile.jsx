@@ -158,7 +158,7 @@ export default function Profile() {
               onClick={() => photoInputRef.current?.click()}
               disabled={uploadingPhoto}
               className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center text-white transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 2px 8px rgba(220,38,38,0.5)' }}
+              style={{ background: 'linear-gradient(135deg,#06b6d4,#0891b2)', boxShadow: '0 2px 8px rgba(6,182,212,0.5)' }}
               title="Change photo"
             >
               {uploadingPhoto
