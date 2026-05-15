@@ -75,6 +75,7 @@ const Dashboard = () => {
   const [showWifiPass, setShowWifiPass] = useState(false);
   const [wifiSaving, setWifiSaving] = useState(false);
   const [wifiStatus, setWifiStatus] = useState(null);
+  const [foregroundAlert, setForegroundAlert] = useState(null); // { title, body }
 
   useEffect(() => {
   if (!currentUser?.uid) return;
@@ -106,11 +107,17 @@ const Dashboard = () => {
           isRead: false,
         };
         setAlerts(prev => [newAlert, ...prev]);
-        // Re-register for the next message
+
+        // Show visible in-app banner
+        setForegroundAlert({
+          title: payload.notification?.title || 'AlertVibe Alert',
+          body:  payload.notification?.body  || 'Vibration detected on your motorcycle!',
+        });
+        setTimeout(() => setForegroundAlert(null), 8000);
+
         setupMessageListener();
       })
       .catch(() => {
-        // Re-register even on error so we don't stop listening
         setupMessageListener();
       });
   };
@@ -242,6 +249,23 @@ const Dashboard = () => {
 
   return (
     <div className="av-bg av-grid-bg h-screen overflow-hidden flex flex-col" style={{ minHeight: '100dvh' }}>
+
+      {/* ── Foreground notification banner ── */}
+      {foregroundAlert && (
+        <div className="fixed top-4 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 px-4"
+             style={{ animation: 'slideDown 0.3s ease' }}>
+          <div className="rounded-2xl px-5 py-4 flex items-start gap-3 shadow-2xl"
+               style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 8px 32px rgba(220,38,38,0.5)' }}>
+            <span className="text-2xl flex-shrink-0">🚨</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-black text-sm leading-tight">{foregroundAlert.title}</p>
+              <p className="text-red-100 text-xs mt-1 leading-snug">{foregroundAlert.body}</p>
+            </div>
+            <button onClick={() => setForegroundAlert(null)}
+                    className="text-white/60 hover:text-white text-lg leading-none flex-shrink-0 transition-colors">&times;</button>
+          </div>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 sm:px-8 py-4"
