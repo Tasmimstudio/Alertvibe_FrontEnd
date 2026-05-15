@@ -61,9 +61,14 @@ function ProtectedRoute({ children, requiredRole }) {
 }
 
 function AppContent() {
+  const { currentUser } = useAuth();
+
+  // Request notification permission once the user is logged in
   useEffect(() => {
-    requestNotificationPermission().catch(() => {});
-  }, []);
+    if (currentUser) {
+      requestNotificationPermission().catch(() => {});
+    }
+  }, [currentUser?.uid]);
 
   return (
     <div className="min-h-screen">
