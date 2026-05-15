@@ -335,30 +335,30 @@ function AdminDashboard() {
     <div className="av-bg av-grid-bg min-h-screen flex flex-col">
 
       {/* Header */}
-      <header className="flex items-center justify-between px-8 py-4"
+      <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center gap-3">
           <Logo />
           <div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-2 h-2 rounded-full bg-purple-400" style={{ boxShadow: '0 0 0 3px rgba(192,132,252,0.25)' }} />
-              <span className="text-purple-400 text-xs font-semibold tracking-wider">ADMIN ACCESS</span>
+              <span className="text-purple-400 text-xs font-semibold tracking-wider hidden xs:inline">ADMIN ACCESS</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <ThemeSwitch />
-          <div className="text-right">
-            <p className="text-white text-base font-semibold">{userProfile?.displayName || 'Admin'}</p>
+          <div className="text-right hidden sm:block">
+            <p className="text-white text-sm font-semibold">{userProfile?.displayName || 'Admin'}</p>
             <p className="text-purple-400 text-xs font-semibold">Administrator</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile"
-                   className="w-20 h-20 rounded-full object-cover"
+                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }} />
             ) : (
-              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-white text-sm"
                    style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)', boxShadow: '0 2px 8px rgba(168,85,247,0.4)' }}>
                 {initials}
               </div>
@@ -438,7 +438,7 @@ function AdminDashboard() {
                       { label: 'System Settings', tab: 'settings', color: '#0891b2' },
                     ].map(({ label, tab, color }) => (
                       <button key={tab} onClick={() => setActiveTab(tab)}
-                        className="w-full py-2.5 px-4 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90 hover:-translate-y-px"
+                        className="w-full py-1.5 px-4 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90 hover:-translate-y-px"
                         style={{ background: color }}>
                         {label}
                       </button>
@@ -483,7 +483,7 @@ function AdminDashboard() {
                     </div>
                   ))}
                   <button type="submit" disabled={formLoading}
-                    className="w-full py-3 rounded-xl font-bold text-white transition-all disabled:opacity-50 hover:-translate-y-px"
+                    className="w-full py-1.5 rounded-xl font-bold text-white transition-all disabled:opacity-50 hover:-translate-y-px"
                     style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)', boxShadow: '0 4px 14px rgba(168,85,247,0.4)' }}>
                     {formLoading ? 'Adding…' : 'Add Security Personnel'}
                   </button>
@@ -508,8 +508,7 @@ function AdminDashboard() {
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); setUsersPage(1); }}
                     placeholder="Search users…"
-                    className="av-input !pl-9 py-2 text-sm"
-                    style={{ width: 220 }}
+                    className="av-input !pl-9 py-2 text-sm w-44 lg:w-56"
                   />
                 </div>
               </div>
@@ -697,7 +696,7 @@ function AdminDashboard() {
                   <button
                     type="submit"
                     disabled={modelSaving || !newModelName.trim()}
-                    className="px-5 py-2.5 rounded-xl font-bold text-white text-sm flex-shrink-0 disabled:opacity-50 transition-all hover:-translate-y-px"
+                    className="px-5 py-1.5 rounded-xl font-bold text-white text-sm flex-shrink-0 disabled:opacity-50 transition-all hover:-translate-y-px"
                     style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)', boxShadow: '0 4px 14px rgba(168,85,247,0.3)' }}>
                     {modelSaving ? 'Adding…' : '+ Add'}
                   </button>
@@ -873,12 +872,12 @@ function AdminDashboard() {
               </div>
               <div className="flex gap-3">
                 <button type="button" onClick={() => setPwModal(null)}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white transition-all"
+                        className="flex-1 py-1.5 rounded-xl text-sm font-bold text-white/60 hover:text-white transition-all"
                         style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}>
                   Cancel
                 </button>
                 <button type="submit" disabled={savingPw}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 transition-all hover:-translate-y-px"
+                        className="flex-1 py-1.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 transition-all hover:-translate-y-px"
                         style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}>
                   {savingPw ? 'Saving…' : 'Update Password'}
                 </button>

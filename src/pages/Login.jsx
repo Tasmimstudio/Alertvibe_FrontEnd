@@ -133,6 +133,10 @@ function Login() {
             <div>
               <p className="text-white font-black text-2xl tracking-wide leading-none">AlertVibe™</p>
               <p className="text-white/45 text-xs mt-1 tracking-wider">MSU-TCTO</p>
+              <p className="text-xs font-semibold mt-2 italic"
+                 style={{ background: 'linear-gradient(135deg, #22d3ee, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                Protect What Moves You.
+              </p>
             </div>
           </div>
 
@@ -166,7 +170,7 @@ function Login() {
         }}/>
 
         {/* ── Form card ── */}
-        <div className="relative z-10 w-full bg-white rounded-2xl px-8 py-9"
+        <div className="relative z-10 w-full bg-white rounded-2xl px-5 sm:px-8 py-7 sm:py-9"
              style={{
                maxWidth: 420,
                boxShadow: '0 32px 80px rgba(0,0,0,0.35)',

@@ -170,18 +170,18 @@ const AlertHistory = () => {
     <div className="av-bg av-grid-bg h-screen overflow-hidden flex flex-col" style={{ minHeight: '100dvh' }}>
 
       {/* Header */}
-      <header className="flex items-center justify-between px-8 py-4"
+      <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(12px)' }}>
         <div className="flex items-center gap-3">
           <Logo />
           <div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-2 h-2 rounded-full bg-green-400 status-pulse" />
-              <span className="text-green-400 text-xs font-semibold tracking-wider">CONNECTED</span>
+              <span className="text-green-400 text-xs font-semibold tracking-wider hidden sm:inline">CONNECTED</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Search */}
           <div className="relative hidden md:block">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30">
@@ -194,22 +194,21 @@ const AlertHistory = () => {
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Search alerts…"
-              className="av-input !pl-9 py-2 text-sm"
-              style={{ width: 220 }}
+              className="av-input !pl-9 py-2 text-sm w-44 lg:w-56"
             />
           </div>
           <ThemeSwitch />
-          <div className="text-right">
-            <p className="text-white text-base font-semibold">{userProfile?.displayName || currentUser?.email || 'User'}</p>
+          <div className="text-right hidden sm:block">
+            <p className="text-white text-sm font-semibold">{userProfile?.displayName || currentUser?.email || 'User'}</p>
             <p className="text-white/40 text-xs capitalize">{userProfile?.role || 'user'}</p>
           </div>
           <button onClick={() => navigate('/profile')} className="hover:opacity-80 transition-opacity flex-shrink-0" title="My Profile">
             {userProfile?.photoURL ? (
               <img src={userProfile.photoURL} alt="Profile"
-                   className="w-20 h-20 rounded-full object-cover"
+                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                    style={{ boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }} />
             ) : (
-              <div className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-white text-base"
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold text-white text-sm"
                    style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 2px 8px rgba(99,102,241,0.4)' }}>
                 {initials}
               </div>
