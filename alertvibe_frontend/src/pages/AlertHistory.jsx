@@ -64,6 +64,7 @@ const AlertHistory = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [clearingAll, setClearingAll] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(null);
+  const [selectedAlert, setSelectedAlert] = useState(null);
 
   useEffect(() => {
     fetchAlerts();
@@ -172,6 +173,67 @@ const AlertHistory = () => {
 
   return (
     <div className="av-bg av-grid-bg h-screen overflow-hidden flex flex-col" style={{ minHeight: '100dvh' }}>
+
+      {/* Alert Detail Modal */}
+      {selectedAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
+             onClick={() => setSelectedAlert(null)}>
+          <div className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-4"
+               style={{ background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+               onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-bold text-lg">Alert Details</h3>
+              <button onClick={() => setSelectedAlert(null)}
+                      className="text-white/40 hover:text-white transition-colors text-xl leading-none">✕</button>
+            </div>
+
+            {/* Alert info */}
+            <div className="rounded-xl p-4 flex flex-col gap-2"
+                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="badge badge-blue">{selectedAlert.motorcycle}</span>
+                <span className="text-white/40 text-xs">{selectedAlert.date} · {selectedAlert.time}</span>
+              </div>
+              <p className="text-white font-semibold text-sm">{selectedAlert.message}</p>
+            </div>
+
+            {/* Response section */}
+            <div className="rounded-xl p-4 flex flex-col gap-3"
+                 style={{
+                   background: selectedAlert.isResponded ? 'rgba(74,222,128,0.06)' : 'rgba(239,68,68,0.06)',
+                   border: `1px solid ${selectedAlert.isResponded ? 'rgba(74,222,128,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                 }}>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{selectedAlert.isResponded ? '✅' : '⏳'}</span>
+                <span className={`font-bold text-sm ${selectedAlert.isResponded ? 'text-green-400' : 'text-red-400'}`}>
+                  {selectedAlert.isResponded ? 'Security Has Responded' : 'Awaiting Security Response'}
+                </span>
+              </div>
+
+              {selectedAlert.isResponded && (
+                <>
+                  {selectedAlert.respondedBy && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-white/40 text-xs uppercase tracking-wider font-semibold">Responded By</span>
+                      <span className="text-white font-bold text-base">{selectedAlert.respondedBy}</span>
+                    </div>
+                  )}
+                  {selectedAlert.notes && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-white/40 text-xs uppercase tracking-wider font-semibold">Notes</span>
+                      <p className="text-white/80 text-sm leading-relaxed italic">"{selectedAlert.notes}"</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4"
@@ -298,7 +360,9 @@ const AlertHistory = () => {
                   </thead>
                   <tbody>
                     {paged.map((alert) => (
-                      <tr key={alert.id}>
+                      <tr key={alert.id}
+                          onClick={() => setSelectedAlert(alert)}
+                          className="cursor-pointer hover:bg-white/5 transition-colors">
                         <td className="font-semibold">{alert.date}</td>
                         <td className="text-white/60">{alert.time}</td>
                         <td>
@@ -307,25 +371,17 @@ const AlertHistory = () => {
                         <td>{alert.message}</td>
                         <td>
                           {alert.isResponded ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="badge badge-green">Responded</span>
+                            <div className="flex flex-col gap-1">
+                              <span className="badge badge-green">✓ Responded</span>
                               {alert.respondedBy && (
-                                <span className="text-white/60 text-xs">by {alert.respondedBy}</span>
-                              )}
-                              {alert.notes && (
-                                <span
-                                  className="text-white/40 text-xs italic max-w-[160px] truncate"
-                                  title={alert.notes}
-                                >
-                                  "{alert.notes}"
-                                </span>
+                                <span className="text-white font-semibold text-xs">by {alert.respondedBy}</span>
                               )}
                             </div>
                           ) : (
                             <span className="badge badge-red">Pending</span>
                           )}
                         </td>
-                        <td className="text-center">
+                        <td className="text-center" onClick={e => e.stopPropagation()}>
                           <label className="flex items-center justify-center gap-2 cursor-pointer">
                             <span className={`badge ${alert.isRead ? 'badge-green' : 'badge-red'}`}>
                               {alert.isRead ? 'Read' : 'Unread'}
@@ -340,7 +396,7 @@ const AlertHistory = () => {
                         </td>
                         <td className="text-center">
                           <button
-                            onClick={() => handleDelete(alert.id)}
+                            onClick={(e) => { e.stopPropagation(); handleDelete(alert.id); }}
                             disabled={deletingId === alert.id}
                             title="Delete alert"
                             className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
