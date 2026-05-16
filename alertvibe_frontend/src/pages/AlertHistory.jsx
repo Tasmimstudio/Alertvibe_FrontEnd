@@ -83,6 +83,10 @@ const AlertHistory = () => {
         motorcycle: alert.deviceId || 'Unknown',
         message: alert.message || 'VIBRATION DETECTED',
         isRead: alert.responded || readIds.has(alert.id),
+        isResponded: alert.responded || false,
+        respondedBy: alert.respondedBy || null,
+        respondedAt: alert.respondedAt || null,
+        notes: alert.notes || '',
         _raw: alert.timestamp,
       }));
       setAlerts(formattedAlerts);
@@ -287,6 +291,7 @@ const AlertHistory = () => {
                       <th className="text-left">Time</th>
                       <th className="text-left">Device</th>
                       <th className="text-left">Message</th>
+                      <th className="text-left">Response</th>
                       <th className="text-center">Status</th>
                       <th className="text-center">Action</th>
                     </tr>
@@ -300,6 +305,26 @@ const AlertHistory = () => {
                           <span className="badge badge-blue">{alert.motorcycle}</span>
                         </td>
                         <td>{alert.message}</td>
+                        <td>
+                          {alert.isResponded ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="badge badge-green">Responded</span>
+                              {alert.respondedBy && (
+                                <span className="text-white/60 text-xs">by {alert.respondedBy}</span>
+                              )}
+                              {alert.notes && (
+                                <span
+                                  className="text-white/40 text-xs italic max-w-[160px] truncate"
+                                  title={alert.notes}
+                                >
+                                  "{alert.notes}"
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="badge badge-red">Pending</span>
+                          )}
+                        </td>
                         <td className="text-center">
                           <label className="flex items-center justify-center gap-2 cursor-pointer">
                             <span className={`badge ${alert.isRead ? 'badge-green' : 'badge-red'}`}>

@@ -171,6 +171,9 @@ const Dashboard = () => {
         deviceId: alert.deviceId,
         severity: alert.severity,
         isRead: alert.responded || readIds.has(alert.id),
+        isResponded: alert.responded || false,
+        respondedBy: alert.respondedBy || null,
+        notes: alert.notes || '',
         timestampMs: alert.timestamp?._seconds
           ? alert.timestamp._seconds * 1000
           : alert.timestamp ? new Date(alert.timestamp).getTime() : 0,
@@ -450,11 +453,28 @@ const Dashboard = () => {
                             </p>
                           </div>
 
-                          <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(239,68,68,0.2)' }}>
+                          <div className="mt-4 pt-3 flex items-center justify-between flex-wrap gap-2"
+                               style={{ borderTop: '1px solid rgba(239,68,68,0.2)' }}>
                             <button onClick={() => navigate('/history')}
                                     className="text-red-400 hover:text-red-300 text-xs font-semibold transition-colors">
                               View full alert log →
                             </button>
+                            {activeGroup.latest.isResponded ? (
+                              <div className="flex flex-col items-end gap-0.5">
+                                <span className="badge badge-green text-xs">✓ Security Responded</span>
+                                {activeGroup.latest.respondedBy && (
+                                  <span className="text-white/50 text-xs">by {activeGroup.latest.respondedBy}</span>
+                                )}
+                                {activeGroup.latest.notes && (
+                                  <span className="text-white/40 text-xs italic max-w-[200px] truncate text-right"
+                                        title={activeGroup.latest.notes}>
+                                    "{activeGroup.latest.notes}"
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="badge badge-red text-xs">Awaiting Response</span>
+                            )}
                           </div>
                         </div>
                       ) : (
