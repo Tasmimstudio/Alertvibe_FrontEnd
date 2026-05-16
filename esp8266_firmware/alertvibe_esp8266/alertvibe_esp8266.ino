@@ -31,13 +31,12 @@ const char* DEFAULT_SSID     = "SIGIDAS";
 const char* DEFAULT_PASSWORD = "Lolipop123";
 
 // LOCAL backend (same WiFi as the ESP8266 — no sleep/timeout issues)
-// Use your PC's local IP. Switch to Render URL once ready for production.
-const char* BACKEND_URL      = "http://192.168.1.146:4000/api/alerts";
-const char* WIFI_CONFIG_URL  = "http://192.168.1.146:4000/api/motorcycles/wifi/config";
+// const char* BACKEND_URL      = "http://192.168.1.146:4000/api/alerts";
+// const char* WIFI_CONFIG_URL  = "http://192.168.1.146:4000/api/motorcycles/wifi/config";
 
-// PRODUCTION (uncomment when deploying):
-// const char* BACKEND_URL     = "https://alervibe-bckend.onrender.com/api/alerts";
-// const char* WIFI_CONFIG_URL = "https://alervibe-bckend.onrender.com/api/motorcycles/wifi/config";
+// PRODUCTION — Render cloud backend (HTTPS)
+const char* BACKEND_URL     = "https://alervibe-bckend.onrender.com/api/alerts";
+const char* WIFI_CONFIG_URL = "https://alervibe-bckend.onrender.com/api/motorcycles/wifi/config";
 
 const char* DEVICE_ID        = "motorcycle-02";
 const char* LOCATION         = "Motorcycle";
@@ -133,12 +132,13 @@ String extractJsonString(const String& json, const String& key) {
 void checkWifiConfigUpdate() {
   if (WiFi.status() != WL_CONNECTED) return;
 
-  WiFiClient client;
+  BearSSL::WiFiClientSecure client;
+  client.setInsecure();  // skip cert validation — fine for internal config polling
   HTTPClient http;
 
   String url = String(WIFI_CONFIG_URL) + "?deviceId=" + String(DEVICE_ID);
   http.begin(client, url);
-  http.setTimeout(10000);
+  http.setTimeout(30000);
 
   int code = http.GET();
   if (code == 200) {
@@ -217,10 +217,10 @@ bool sendAlert(int count) {
   }
 
   HTTPClient http;
-  // Use plain WiFiClient for HTTP (local backend). For HTTPS (Render), swap in BearSSL::WiFiClientSecure + setInsecure().
-  WiFiClient plainClient;
-  http.begin(plainClient, BACKEND_URL);
-  http.setTimeout(20000);
+  BearSSL::WiFiClientSecure secureClient;
+  secureClient.setInsecure();  // skip cert validation for Render HTTPS
+  http.begin(secureClient, BACKEND_URL);
+  http.setTimeout(30000);  // Render free tier can take up to 30s on cold start
   http.addHeader("Content-Type", "application/json");
 
   const char* sev;
@@ -310,8 +310,9 @@ void setup() {
   connectWiFi();
   checkWifiConfigUpdate();  // Apply any pending config change from dashboard
 
-  // Allow the first alert immediately — no need to wait for cooldown on fresh boot
-  lastAlertTime = millis() - COOLDOWN_MS;
+  // Allow the first alert immediately — guard against unsigned underflow
+  unsigned long now_setup = millis();
+  lastAlertTime = (now_setup >= COOLDOWN_MS) ? now_setup - COOLDOWN_MS : 0;
 
   Serial.println("Monitoring for vibration...");
   Serial.print("LOW  threshold : "); Serial.print(LOW_THRESHOLD);  Serial.println(" pulses");
