@@ -231,11 +231,9 @@ Set these in **render.com → your service → Environment**:
 
 #### FIREBASE_SERVICE_ACCOUNT_JSON value
 
-Paste this entire line as the value (one single line, do not add line breaks):
+Generate a new service account key from Firebase Console → Project Settings → Service Accounts → Generate new private key.
 
-```
-[REDACTED - set FIREBASE_SERVICE_ACCOUNT_JSON in environment variables]
-```
+Paste the entire downloaded JSON as a single line (no line breaks) as the value of `FIREBASE_SERVICE_ACCOUNT_JSON` in your Render environment variables. Do **not** paste the key here or commit it to the repository.
 
 ---
 
