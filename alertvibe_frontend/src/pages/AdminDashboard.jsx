@@ -634,6 +634,7 @@ function AdminDashboard() {
                       <th className="text-left">Message</th>
                       <th className="text-left">Severity</th>
                       <th className="text-left">Status</th>
+                      <th className="text-left">Responded By</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -655,6 +656,18 @@ function AdminDashboard() {
                           <span className={`badge ${alert.responded ? 'badge-green' : 'badge-red'}`}>
                             {alert.responded ? 'Responded' : 'Pending'}
                           </span>
+                        </td>
+                        <td>
+                          {alert.responded && alert.respondedBy ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-white font-semibold text-sm">{alert.respondedBy}</span>
+                              {alert.notes && (
+                                <span className="text-white/45 text-xs italic">"{alert.notes}"</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-white/30 text-sm">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}
