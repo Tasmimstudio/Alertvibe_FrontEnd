@@ -453,28 +453,40 @@ const Dashboard = () => {
                             </p>
                           </div>
 
-                          <div className="mt-4 pt-3 flex items-center justify-between flex-wrap gap-2"
-                               style={{ borderTop: '1px solid rgba(239,68,68,0.2)' }}>
+                          {/* Security response section */}
+                          <div className="mt-4 rounded-xl p-3"
+                               style={{
+                                 background: activeGroup.latest.isResponded ? 'rgba(74,222,128,0.08)' : 'rgba(239,68,68,0.08)',
+                                 border: `1px solid ${activeGroup.latest.isResponded ? 'rgba(74,222,128,0.25)' : 'rgba(239,68,68,0.2)'}`,
+                               }}>
+                            {activeGroup.latest.isResponded ? (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base">✅</span>
+                                  <span className="text-green-400 font-bold text-sm">Security Has Responded</span>
+                                </div>
+                                {activeGroup.latest.respondedBy && (
+                                  <p className="text-white font-semibold text-sm">
+                                    Responded by: <span className="text-green-300">{activeGroup.latest.respondedBy}</span>
+                                  </p>
+                                )}
+                                {activeGroup.latest.notes && (
+                                  <p className="text-white/60 text-xs italic">"{activeGroup.latest.notes}"</p>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">⏳</span>
+                                <span className="text-red-400 font-semibold text-sm">Awaiting Security Response</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="mt-3">
                             <button onClick={() => navigate('/history')}
                                     className="text-red-400 hover:text-red-300 text-xs font-semibold transition-colors">
                               View full alert log →
                             </button>
-                            {activeGroup.latest.isResponded ? (
-                              <div className="flex flex-col items-end gap-0.5">
-                                <span className="badge badge-green text-xs">✓ Security Responded</span>
-                                {activeGroup.latest.respondedBy && (
-                                  <span className="text-white/50 text-xs">by {activeGroup.latest.respondedBy}</span>
-                                )}
-                                {activeGroup.latest.notes && (
-                                  <span className="text-white/40 text-xs italic max-w-[200px] truncate text-right"
-                                        title={activeGroup.latest.notes}>
-                                    "{activeGroup.latest.notes}"
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="badge badge-red text-xs">Awaiting Response</span>
-                            )}
                           </div>
                         </div>
                       ) : (
@@ -558,8 +570,23 @@ const Dashboard = () => {
                       <div className="space-y-3">
                         {alerts.slice(0, 3).map((alert) => (
                           <div key={alert.id} className="alert-card">
-                            <p className="text-white/85 text-sm">{alert.message}</p>
-                            <p className="text-white/35 text-xs mt-1">{alert.date}</p>
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white/85 text-sm">{alert.message}</p>
+                                <p className="text-white/35 text-xs mt-1">{alert.date}</p>
+                              </div>
+                              <span className={`badge flex-shrink-0 ${alert.isResponded ? 'badge-green' : 'badge-red'}`}>
+                                {alert.isResponded ? '✓ Responded' : 'Pending'}
+                              </span>
+                            </div>
+                            {alert.isResponded && alert.respondedBy && (
+                              <div className="mt-2 pt-2 flex items-center gap-1.5"
+                                   style={{ borderTop: '1px solid rgba(74,222,128,0.15)' }}>
+                                <span className="text-green-400 text-xs">👮</span>
+                                <span className="text-white/50 text-xs">Responded by </span>
+                                <span className="text-white font-semibold text-xs">{alert.respondedBy}</span>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
