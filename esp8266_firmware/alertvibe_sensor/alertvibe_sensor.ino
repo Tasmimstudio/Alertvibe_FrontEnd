@@ -30,14 +30,13 @@
 const char* DEFAULT_SSID     = "SIGIDAS";
 const char* DEFAULT_PASSWORD = "Lolipop123";
 
-// LOCAL backend (same WiFi as the ESP32 — no sleep/timeout issues)
-// Use your PC's local IP. Switch to Render URL once ready for production.
-const char* BACKEND_URL      = "http://192.168.1.146:4000/api/alerts";
-const char* WIFI_CONFIG_URL  = "http://192.168.1.146:4000/api/motorcycles/wifi/config";
+// LOCAL backend:
+// const char* BACKEND_URL      = "http://192.168.1.146:4000/api/alerts";
+// const char* WIFI_CONFIG_URL  = "http://192.168.1.146:4000/api/motorcycles/wifi/config";
 
-// PRODUCTION (uncomment when deploying):
-// const char* BACKEND_URL   = "https://alertvibe-backend.onrender.com/api/alerts";
-// const char* WIFI_CONFIG_URL = "https://alertvibe-backend.onrender.com/api/motorcycles/wifi/config";
+// PRODUCTION — Render cloud backend (HTTPS)
+const char* BACKEND_URL     = "https://alervibe-bckend.onrender.com/api/alerts";
+const char* WIFI_CONFIG_URL = "https://alervibe-bckend.onrender.com/api/motorcycles/wifi/config";
 
 const char* DEVICE_ID        = "motorcycle-01";
 const char* LOCATION         = "Motorcycle";
@@ -76,6 +75,7 @@ unsigned long lastVibrationTime = 0;
 unsigned long pulseWindowStart  = 0;
 bool          vibrating         = false;
 int           pulseCount        = 0;
+int           sensorTriggerLevel = LOW;  // auto-detected in setup()
 
 // ─── NVS Credential Helpers ───────────────────────────────────────────────────
 void loadCredentials() {
@@ -118,12 +118,13 @@ String extractJsonString(const String& json, const String& key) {
 void checkWifiConfigUpdate() {
   if (WiFi.status() != WL_CONNECTED) return;
 
-  WiFiClient client;
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
 
   String url = String(WIFI_CONFIG_URL) + "?deviceId=" + String(DEVICE_ID);
   http.begin(client, url);
-  http.setTimeout(10000);
+  http.setTimeout(30000);
 
   int code = http.GET();
   if (code == 200) {
@@ -161,6 +162,10 @@ void setSafeState() {
 
 // ─── WiFi ─────────────────────────────────────────────────────────────────────
 void connectWiFi() {
+  WiFi.persistent(false);
+  WiFi.disconnect(true);
+  delay(200);
+
   Serial.print("Connecting to WiFi: ");
   Serial.println(currentSsid);
 
@@ -172,12 +177,23 @@ void connectWiFi() {
 
   unsigned long start = millis();
   bool blink = false;
+  int attempts = 0;
+
   while (WiFi.status() != WL_CONNECTED) {
     if (millis() - start > WIFI_TIMEOUT) {
-      Serial.println("\nWiFi timeout — restarting");
-      allLedsOff();
-      delay(1500);
-      ESP.restart();
+      attempts++;
+      Serial.printf("\nWiFi timeout (attempt %d)\n", attempts);
+      if (attempts >= 3) {
+        strncpy(currentSsid,     DEFAULT_SSID,    sizeof(currentSsid) - 1);
+        strncpy(currentPassword, DEFAULT_PASSWORD, sizeof(currentPassword) - 1);
+        allLedsOff();
+        delay(1000);
+        ESP.restart();
+      }
+      WiFi.disconnect(true);
+      delay(500);
+      WiFi.begin(currentSsid, currentPassword);
+      start = millis();
     }
     // Blink green while connecting
     blink = !blink;
@@ -202,10 +218,10 @@ bool sendAlert(int count) {
   }
 
   HTTPClient http;
-  // Use plain WiFiClient for HTTP (local backend). For HTTPS (Render), swap in WiFiClientSecure + setInsecure().
-  WiFiClient plainClient;
-  http.begin(plainClient, BACKEND_URL);
-  http.setTimeout(20000);
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();  // skip cert validation for Render HTTPS
+  http.begin(secureClient, BACKEND_URL);
+  http.setTimeout(30000);  // Render free tier can take up to 30s on cold start
   http.addHeader("Content-Type", "application/json");
 
   const char* sev;
@@ -237,7 +253,7 @@ bool sendAlert(int count) {
   Serial.println(payload);
 
   int httpCode = http.POST(payload);
-  bool success = (httpCode == 200 || httpCode == 201);
+  bool success = (httpCode >= 200 && httpCode < 300);
 
   if (success) {
     Serial.println("Alert sent!");
@@ -283,11 +299,21 @@ void setup() {
   allLedsOff();
   delay(200);
 
-  pinMode(VIBRATION_PIN, INPUT_PULLUP);  // pull-up keeps pin HIGH when idle; SW-40 pulls LOW on vibration
+  pinMode(VIBRATION_PIN, INPUT_PULLUP);
+
+  // Auto-detect sensor polarity: sample 30 readings to find idle state
+  int highCount = 0;
+  for (int i = 0; i < 30; i++) { if (digitalRead(VIBRATION_PIN) == HIGH) highCount++; delay(10); }
+  sensorTriggerLevel = (highCount > 15) ? LOW : HIGH;
+  Serial.println("Sensor idle: " + String(highCount > 15 ? "HIGH" : "LOW") + " → trigger on: " + String(sensorTriggerLevel == LOW ? "LOW" : "HIGH"));
 
   loadCredentials();
   connectWiFi();
   checkWifiConfigUpdate();  // Apply any pending config change from dashboard
+
+  // Allow first alert immediately — guard against unsigned underflow
+  unsigned long now_setup = millis();
+  lastAlertTime = (now_setup >= COOLDOWN_MS) ? now_setup - COOLDOWN_MS : 0;
 
   Serial.println("Monitoring for vibration...");
   Serial.print("LOW  threshold : "); Serial.print(LOW_THRESHOLD);  Serial.println(" pulses");
@@ -299,8 +325,18 @@ void setup() {
 
 // ─── Main Loop ────────────────────────────────────────────────────────────────
 void loop() {
-  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == LOW);
+  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == sensorTriggerLevel);
   unsigned long now    = millis();
+
+  // ── Periodic WiFi reconnect (every 30s) ─────────────────────────────────
+  static unsigned long lastWifiCheck = 0;
+  if (now - lastWifiCheck > 30000) {
+    lastWifiCheck = now;
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi dropped — reconnecting");
+      connectWiFi();
+    }
+  }
 
   // ── Count pulses ────────────────────────────────────────────────────────
   if (sensorTriggered) {
