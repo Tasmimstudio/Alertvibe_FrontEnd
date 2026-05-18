@@ -562,7 +562,7 @@ const Dashboard = () => {
                               </div>
 
                               {/* Photo right side */}
-                              <div className="flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden self-start"
+                              <div className="flex-shrink-0 w-36 h-36 sm:w-52 sm:h-52 rounded-xl overflow-hidden self-start"
                                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
                                 {moto.photoURL ? (
                                   <img src={moto.photoURL} alt={moto.plateNumber}
