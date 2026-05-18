@@ -39,3 +39,5 @@ Thumbs.db
 .vite/
 vite.config.js.timestamp-*
 
+
+.vercel
