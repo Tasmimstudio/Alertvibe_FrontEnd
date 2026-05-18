@@ -200,7 +200,6 @@ function AdminDashboard() {
   };
 
   const handleToggleStatus = async (userId, activate) => {
-    // Optimistic update
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, active: activate } : u));
     try {
       await adminApi.toggleUserStatus(userId, activate);
@@ -208,6 +207,21 @@ function AdminDashboard() {
     } catch (error) {
       fetchData();
       toast('Failed to update status: ' + error.message, 'error');
+    }
+  };
+
+  const handleToggleMotorcycle = async (userId, motorcycleId, isActivated) => {
+    setUsers(prev => prev.map(u => u.id === userId ? {
+      ...u,
+      motorcycles: u.motorcycles.map(m => m.id === motorcycleId ? { ...m, isActivated } : m),
+      motorcycle: u.motorcycle?.id === motorcycleId ? { ...u.motorcycle, isActivated } : u.motorcycle,
+    } : u));
+    try {
+      await motorcycleApi.toggleActivation(motorcycleId, isActivated);
+      toast(`Device ${isActivated ? 'activated' : 'deactivated'}.`, isActivated ? 'success' : 'warning');
+    } catch (error) {
+      fetchData();
+      toast('Failed to toggle device: ' + error.message, 'error');
     }
   };
 
@@ -550,12 +564,25 @@ function AdminDashboard() {
                         <td className="text-white/60 text-sm">{user.email}</td>
                         <td className="text-white/60 text-sm">{user.phoneNumber || <span className="text-white/25">—</span>}</td>
                         <td className="text-white/70 text-sm">
-                          {user.motorcycle ? (
-                            <div>
-                              <p className="font-semibold text-white">{user.motorcycle.plateNumber}</p>
-                              <p className="text-white/40 text-xs">{user.motorcycle.model || 'N/A'}{user.motorcycles?.length > 1 ? ` +${user.motorcycles.length - 1} more` : ''}</p>
+                          {user.motorcycles?.length > 0 ? (
+                            <div className="flex flex-col gap-2">
+                              {user.motorcycles.map(moto => (
+                                <div key={moto.id} className="flex items-center gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-white text-xs leading-tight">{moto.plateNumber}</p>
+                                    <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => handleToggleMotorcycle(user.id, moto.id, moto.isActivated === false)}
+                                    className="px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0 hover:opacity-80 transition-all"
+                                    style={{ background: moto.isActivated !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
+                                  >
+                                    {moto.isActivated !== false ? 'Deactivate' : 'Activate'}
+                                  </button>
+                                </div>
+                              ))}
                             </div>
-                          ) : 'None'}
+                          ) : <span className="text-white/25">None</span>}
                         </td>
                         <td>
                           <select
