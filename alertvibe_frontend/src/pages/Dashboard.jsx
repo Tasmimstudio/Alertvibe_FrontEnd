@@ -95,6 +95,7 @@ const Dashboard = () => {
   const [alerts, setAlerts] = useState([]);
   const [motorcycleInfo, setMotorcycleInfo] = useState(null);
   const [motorcycleId, setMotorcycleId] = useState(null);
+  const [allMotorcycles, setAllMotorcycles] = useState([]);
   const [loading, setLoading] = useState(true);
   // 'checking' | 'connected' | 'disconnected'
   const [connStatus, setConnStatus] = useState('checking');
@@ -188,22 +189,24 @@ const Dashboard = () => {
         }
 
         const motorcyclesData = await motorcycleApi.list({ ownerId: currentUser.uid });
-        if (motorcyclesData.motorcycles?.length > 0) {
-  const m = motorcyclesData.motorcycles[0];
-  setMotorcycleId(m.id);
-  setMotorcycleInfo({
-    plateNumber: m.plateNumber || 'N/A',
-    model: m.model || 'N/A',
-    color: m.color || 'N/A',
-    deviceCode: m.deviceCode || 'N/A',
-    department: m.department || null,
-    parkingLocation: m.parkingLocation || null,
-  });
-  if (m.wifiSsid) setWifiSsid(m.wifiSsid);
-} else {
-  setMotorcycleId(null);
-  setMotorcycleInfo(null);
-}
+        const motoList = motorcyclesData.motorcycles || [];
+        setAllMotorcycles(motoList);
+        if (motoList.length > 0) {
+          const m = motoList[0];
+          setMotorcycleId(m.id);
+          setMotorcycleInfo({
+            plateNumber: m.plateNumber || 'N/A',
+            model: m.model || 'N/A',
+            color: m.color || 'N/A',
+            deviceCode: m.deviceCode || 'N/A',
+            department: m.department || null,
+            parkingLocation: m.parkingLocation || null,
+          });
+          if (m.wifiSsid) setWifiSsid(m.wifiSsid);
+        } else {
+          setMotorcycleId(null);
+          setMotorcycleInfo(null);
+        }
       }
       setConnStatus('connected');
     } catch {
@@ -515,35 +518,65 @@ const Dashboard = () => {
                 {/* Motorcycle Info */}
                 {activeTab === 'motorcycleInfo' && (
                   <div>
-                    <h2 className="text-white font-bold text-lg mb-5">Registered Motorcycle</h2>
-                    {motorcycleInfo ? (
-                      <div className="grid grid-cols-2 gap-4">
-                        {[
-                          { label: 'Plate Number', value: motorcycleInfo.plateNumber },
-                          { label: 'Model',        value: motorcycleInfo.model },
-                          { label: 'Color',        value: motorcycleInfo.color },
-                          { label: 'Device Code',  value: motorcycleInfo.deviceCode },
-                        ].map(({ label, value }) => (
-                          <div key={label} className="rounded-xl p-4"
-                               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">{label}</p>
-                            <p className="text-white font-bold text-lg">{value}</p>
+                    <h2 className="text-white font-bold text-lg mb-5">
+                      Registered Motorcycles
+                      {allMotorcycles.length > 0 && (
+                        <span className="ml-2 badge badge-blue">{allMotorcycles.length}</span>
+                      )}
+                    </h2>
+                    {allMotorcycles.length > 0 ? (
+                      <div className="space-y-4">
+                        {allMotorcycles.map((moto) => (
+                          <div key={moto.id} className="rounded-2xl overflow-hidden"
+                               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div className="flex gap-4 p-4">
+                              {/* Info left side */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                  <span className={`badge ${moto.isActivated !== false ? 'badge-green' : 'badge-red'}`}>
+                                    {moto.isActivated !== false ? 'Active' : 'Inactive'}
+                                  </span>
+                                  <span className="badge badge-blue">{moto.deviceCode || 'N/A'}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {[
+                                    { label: 'Plate Number', value: moto.plateNumber },
+                                    { label: 'Model',        value: moto.model },
+                                    { label: 'Color',        value: moto.color },
+                                    { label: 'Department',   value: moto.department },
+                                  ].filter(f => f.value).map(({ label, value }) => (
+                                    <div key={label} className="rounded-xl p-3"
+                                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                      <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">{label}</p>
+                                      <p className="text-white font-bold text-sm">{value}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                {moto.parkingLocation && (
+                                  <div className="mt-3 rounded-xl p-3"
+                                       style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">Parking Location</p>
+                                    <p className="text-white font-bold text-sm">{moto.parkingLocation}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Photo right side */}
+                              <div className="flex-shrink-0 w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden self-start"
+                                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                {moto.photoURL ? (
+                                  <img src={moto.photoURL} alt={moto.plateNumber}
+                                       className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                                    <span className="text-3xl">🏍️</span>
+                                    <span className="text-white/25 text-xs">No photo</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         ))}
-                        {motorcycleInfo.department && (
-                          <div className="col-span-2 rounded-xl p-4"
-                               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">Department</p>
-                            <p className="text-white font-bold text-lg">{motorcycleInfo.department}</p>
-                          </div>
-                        )}
-                        {motorcycleInfo.parkingLocation && (
-                          <div className="col-span-2 rounded-xl p-4"
-                               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <p className="text-white/40 text-xs uppercase tracking-wider font-semibold mb-1">Parking Location</p>
-                            <p className="text-white font-bold text-lg">{motorcycleInfo.parkingLocation}</p>
-                          </div>
-                        )}
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-12 gap-3">
