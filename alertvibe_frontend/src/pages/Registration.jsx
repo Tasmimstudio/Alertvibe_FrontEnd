@@ -143,10 +143,13 @@ function Registration() {
         {/* Header */}
         <div className="flex items-center justify-between mb-7">
           <div className="flex items-center gap-3">
-            <div className="av-logo" style={{ width: 130, height: 130, borderRadius: '50%' }}>
+            <div className="av-logo" style={{ width: 64, height: 64, borderRadius: '50%' }}>
               <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
             </div>
-            <p className="text-white/40 text-xs">Create Account — MSU-TCTO</p>
+            <div>
+              <p className="text-white font-bold text-base">AlertVibe™</p>
+              <p className="text-white/40 text-xs">Create Account — MSU-TCTO</p>
+            </div>
           </div>
         </div>
 

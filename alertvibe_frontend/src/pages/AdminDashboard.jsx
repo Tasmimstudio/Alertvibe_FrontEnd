@@ -403,7 +403,22 @@ function AdminDashboard() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 p-4 sm:p-6 min-w-0 mobile-pb">
+        <main className="flex-1 p-4 sm:p-6 min-w-0 pb-4 overflow-y-auto">
+          {/* Mobile tab navigation (sidebar hidden on mobile) */}
+          <div className="md:hidden flex gap-2 overflow-x-auto pb-3 mb-4 -mx-1 px-1"
+               style={{ scrollbarWidth: 'none' }}>
+            {SB_ITEMS.map(item => (
+              <button
+                key={item.key}
+                onClick={() => setActiveTab(item.key)}
+                className={`tab-pill flex-shrink-0 flex items-center gap-1.5 ${activeTab === item.key ? 'tab-active' : ''}`}
+                style={activeTab === item.key ? { background: 'linear-gradient(135deg,#a855f7,#7c3aed)', borderColor: 'rgba(168,85,247,0.5)' } : {}}
+              >
+                {item.icon}
+                <span className="text-xs">{item.label}</span>
+              </button>
+            ))}
+          </div>
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <div className="av-spinner" />
@@ -527,31 +542,24 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                <table className="w-full av-table">
-                  <thead>
-                    <tr>
-                      <th className="text-left">Photo</th>
-                      <th className="text-left">Name</th>
-                      <th className="text-left">Email</th>
-                      <th className="text-left">Phone</th>
-                      <th className="text-left">Motorcycle</th>
-                      <th className="text-left">Role</th>
-                      <th className="text-left">Status</th>
-                      <th className="text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              {filteredUsers.length === 0 ? (
+                <p className="text-center text-white/40 py-8 text-sm">No users found</p>
+              ) : (
+                <>
+                  {/* Mobile: user cards */}
+                  <div className="sm:hidden space-y-3">
                     {pagedUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td>
+                      <div key={user.id} className="rounded-xl p-4"
+                           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        {/* Top row: avatar + info + status */}
+                        <div className="flex items-center gap-3 mb-3">
                           <div
-                            className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                            className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
                             style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', cursor: user.photoURL ? 'zoom-in' : 'default' }}
                             onClick={() => user.photoURL && setViewPhoto({ src: user.photoURL, alt: user.displayName || user.email })}
                           >
                             {user.photoURL ? (
-                              <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover hover:scale-110 transition-transform duration-200" />
+                              <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm"
                                    style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)' }}>
@@ -559,32 +567,40 @@ function AdminDashboard() {
                               </div>
                             )}
                           </div>
-                        </td>
-                        <td className="font-semibold text-white">{user.displayName || 'N/A'}</td>
-                        <td className="text-white/60 text-sm">{user.email}</td>
-                        <td className="text-white/60 text-sm">{user.phoneNumber || <span className="text-white/25">—</span>}</td>
-                        <td className="text-white/70 text-sm">
-                          {user.motorcycles?.length > 0 ? (
-                            <div className="flex flex-col gap-2">
-                              {user.motorcycles.map(moto => (
-                                <div key={moto.id} className="flex items-center gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-white text-xs leading-tight">{moto.plateNumber}</p>
-                                    <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
-                                  </div>
-                                  <button
-                                    onClick={() => handleToggleMotorcycle(user.id, moto.id, moto.isActivated === false)}
-                                    className="px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0 hover:opacity-80 transition-all"
-                                    style={{ background: moto.isActivated !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
-                                  >
-                                    {moto.isActivated !== false ? 'Deactivate' : 'Activate'}
-                                  </button>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-bold text-sm truncate">{user.displayName || 'N/A'}</p>
+                            <p className="text-white/50 text-xs truncate">{user.email}</p>
+                            {user.phoneNumber && <p className="text-white/40 text-xs">{user.phoneNumber}</p>}
+                          </div>
+                          <span className={`badge flex-shrink-0 ${user.active !== false ? 'badge-green' : 'badge-red'}`}>
+                            {user.active !== false ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+
+                        {/* Motorcycles */}
+                        {user.motorcycles?.length > 0 && (
+                          <div className="mb-3 space-y-1.5">
+                            {user.motorcycles.map(moto => (
+                              <div key={moto.id} className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                                   style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-white text-xs font-semibold">{moto.plateNumber}</p>
+                                  <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
                                 </div>
-                              ))}
-                            </div>
-                          ) : <span className="text-white/25">None</span>}
-                        </td>
-                        <td>
+                                <button
+                                  onClick={() => handleToggleMotorcycle(user.id, moto.id, moto.isActivated === false)}
+                                  className="px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0"
+                                  style={{ background: moto.isActivated !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
+                                >
+                                  {moto.isActivated !== false ? 'Deactivate' : 'Activate'}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Role + actions */}
+                        <div className="flex items-center gap-2 flex-wrap">
                           <select
                             value={user.role || 'user'}
                             onChange={(e) => handleUpdateRole(user.id, e.target.value)}
@@ -596,48 +612,141 @@ function AdminDashboard() {
                             <option value="security" style={{ background: '#1e293b' }}>Security</option>
                             <option value="admin" style={{ background: '#1e293b' }}>Admin</option>
                           </select>
-                        </td>
-                        <td>
-                          <span className={`badge ${user.active !== false ? 'badge-green' : 'badge-red'}`}>
-                            {user.active !== false ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="flex justify-center gap-1.5 flex-wrap">
-                            <button
-                              onClick={() => handleToggleStatus(user.id, user.active === false)}
-                              disabled={user.id === currentUser?.uid}
-                              className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40 hover:opacity-80 transition-all"
-                              style={{ background: user.active !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
-                            >
-                              {user.active !== false ? 'Deactivate' : 'Activate'}
-                            </button>
-                            <button
-                              onClick={() => { setPwModal({ userId: user.id, displayName: user.displayName || user.email }); setNewPw(''); }}
-                              className="px-3 py-1 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
-                              style={{ background: 'rgba(99,102,241,0.7)' }}
-                              title="Change password"
-                            >
-                              Pwd
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              disabled={user.id === currentUser?.uid}
-                              className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40 hover:opacity-80 transition-all"
-                              style={{ background: 'rgba(239,68,68,0.7)' }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                          <button
+                            onClick={() => handleToggleStatus(user.id, user.active === false)}
+                            disabled={user.id === currentUser?.uid}
+                            className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40"
+                            style={{ background: user.active !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
+                          >
+                            {user.active !== false ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            onClick={() => { setPwModal({ userId: user.id, displayName: user.displayName || user.email }); setNewPw(''); }}
+                            className="px-3 py-1 rounded-lg text-xs font-bold text-white"
+                            style={{ background: 'rgba(99,102,241,0.7)' }}
+                          >Pwd</button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            disabled={user.id === currentUser?.uid}
+                            className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40"
+                            style={{ background: 'rgba(239,68,68,0.7)' }}
+                          >Delete</button>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-                {filteredUsers.length === 0 && (
-                  <p className="text-center text-white/40 py-8 text-sm">No users found</p>
-                )}
-              </div>
+                  </div>
+
+                  {/* Desktop: table */}
+                  <div className="hidden sm:block overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <table className="w-full av-table">
+                      <thead>
+                        <tr>
+                          <th className="text-left">Photo</th>
+                          <th className="text-left">Name</th>
+                          <th className="text-left">Email</th>
+                          <th className="text-left">Phone</th>
+                          <th className="text-left">Motorcycle</th>
+                          <th className="text-left">Role</th>
+                          <th className="text-left">Status</th>
+                          <th className="text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pagedUsers.map((user) => (
+                          <tr key={user.id}>
+                            <td>
+                              <div
+                                className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', cursor: user.photoURL ? 'zoom-in' : 'default' }}
+                                onClick={() => user.photoURL && setViewPhoto({ src: user.photoURL, alt: user.displayName || user.email })}
+                              >
+                                {user.photoURL ? (
+                                  <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover hover:scale-110 transition-transform duration-200" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm"
+                                       style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)' }}>
+                                    {user.displayName?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || '?'}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="font-semibold text-white">{user.displayName || 'N/A'}</td>
+                            <td className="text-white/60 text-sm">{user.email}</td>
+                            <td className="text-white/60 text-sm">{user.phoneNumber || <span className="text-white/25">—</span>}</td>
+                            <td className="text-white/70 text-sm">
+                              {user.motorcycles?.length > 0 ? (
+                                <div className="flex flex-col gap-2">
+                                  {user.motorcycles.map(moto => (
+                                    <div key={moto.id} className="flex items-center gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-white text-xs leading-tight">{moto.plateNumber}</p>
+                                        <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleToggleMotorcycle(user.id, moto.id, moto.isActivated === false)}
+                                        className="px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0 hover:opacity-80 transition-all"
+                                        style={{ background: moto.isActivated !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
+                                      >
+                                        {moto.isActivated !== false ? 'Deactivate' : 'Activate'}
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : <span className="text-white/25">None</span>}
+                            </td>
+                            <td>
+                              <select
+                                value={user.role || 'user'}
+                                onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                                disabled={user.id === currentUser?.uid}
+                                className="px-2 py-1 rounded-lg text-xs font-semibold disabled:opacity-50 outline-none"
+                                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff' }}
+                              >
+                                <option value="user" style={{ background: '#1e293b' }}>User</option>
+                                <option value="security" style={{ background: '#1e293b' }}>Security</option>
+                                <option value="admin" style={{ background: '#1e293b' }}>Admin</option>
+                              </select>
+                            </td>
+                            <td>
+                              <span className={`badge ${user.active !== false ? 'badge-green' : 'badge-red'}`}>
+                                {user.active !== false ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="flex justify-center gap-1.5 flex-wrap">
+                                <button
+                                  onClick={() => handleToggleStatus(user.id, user.active === false)}
+                                  disabled={user.id === currentUser?.uid}
+                                  className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40 hover:opacity-80 transition-all"
+                                  style={{ background: user.active !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
+                                >
+                                  {user.active !== false ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button
+                                  onClick={() => { setPwModal({ userId: user.id, displayName: user.displayName || user.email }); setNewPw(''); }}
+                                  className="px-3 py-1 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
+                                  style={{ background: 'rgba(99,102,241,0.7)' }}
+                                  title="Change password"
+                                >
+                                  Pwd
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  disabled={user.id === currentUser?.uid}
+                                  className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40 hover:opacity-80 transition-all"
+                                  style={{ background: 'rgba(239,68,68,0.7)' }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
               <Pagination
                 page={usersSafePage}
                 totalPages={usersTotalPages}
@@ -652,58 +761,90 @@ function AdminDashboard() {
             /* ── Alerts ── */
             <div className="glass h-full p-6 flex flex-col">
               <h2 className="text-white font-bold text-xl mb-5">Alert History</h2>
-              <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                <table className="w-full av-table">
-                  <thead>
-                    <tr>
-                      <th className="text-left">Date / Time</th>
-                      <th className="text-left">Device ID</th>
-                      <th className="text-left">Message</th>
-                      <th className="text-left">Severity</th>
-                      <th className="text-left">Status</th>
-                      <th className="text-left">Responded By</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              {alerts.length === 0 ? (
+                <p className="text-center text-white/40 py-8 text-sm">No alerts found</p>
+              ) : (
+                <>
+                  {/* Mobile: alert cards */}
+                  <div className="sm:hidden space-y-3">
                     {pagedAlerts.map((alert) => (
-                      <tr key={alert.id}>
-                        <td className="text-white/60 text-xs">{formatDate(alert.timestamp)}</td>
-                        <td><span className="badge badge-blue">{alert.deviceId || 'N/A'}</span></td>
-                        <td>{alert.message || 'Vibration detected'}</td>
-                        <td>
+                      <div key={alert.id} className="rounded-xl p-4"
+                           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="badge badge-blue">{alert.deviceId || 'N/A'}</span>
                           <span className={`badge ${
                             alert.severity === 'high' ? 'badge-red'
                               : alert.severity === 'medium' ? 'badge-yellow'
                               : 'badge-blue'
-                          }`}>
-                            {alert.severity || 'normal'}
-                          </span>
-                        </td>
-                        <td>
+                          }`}>{alert.severity || 'normal'}</span>
                           <span className={`badge ${alert.responded ? 'badge-green' : 'badge-red'}`}>
                             {alert.responded ? 'Responded' : 'Pending'}
                           </span>
-                        </td>
-                        <td>
-                          {alert.responded && alert.respondedBy ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-white font-semibold text-sm">{alert.respondedBy}</span>
-                              {alert.notes && (
-                                <span className="text-white/45 text-xs italic">"{alert.notes}"</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-white/30 text-sm">—</span>
-                          )}
-                        </td>
-                      </tr>
+                        </div>
+                        <p className="text-white/85 text-sm mb-1">{alert.message || 'Vibration detected'}</p>
+                        <p className="text-white/35 text-xs">{formatDate(alert.timestamp)}</p>
+                        {alert.responded && alert.respondedBy && (
+                          <p className="text-white/60 text-xs mt-1">
+                            👮 <span className="text-white font-semibold">{alert.respondedBy}</span>
+                            {alert.notes && <span className="italic"> · "{alert.notes}"</span>}
+                          </p>
+                        )}
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-                {alerts.length === 0 && (
-                  <p className="text-center text-white/40 py-8 text-sm">No alerts found</p>
-                )}
-              </div>
+                  </div>
+
+                  {/* Desktop: table */}
+                  <div className="hidden sm:block overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <table className="w-full av-table">
+                      <thead>
+                        <tr>
+                          <th className="text-left">Date / Time</th>
+                          <th className="text-left">Device ID</th>
+                          <th className="text-left">Message</th>
+                          <th className="text-left">Severity</th>
+                          <th className="text-left">Status</th>
+                          <th className="text-left">Responded By</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pagedAlerts.map((alert) => (
+                          <tr key={alert.id}>
+                            <td className="text-white/60 text-xs">{formatDate(alert.timestamp)}</td>
+                            <td><span className="badge badge-blue">{alert.deviceId || 'N/A'}</span></td>
+                            <td>{alert.message || 'Vibration detected'}</td>
+                            <td>
+                              <span className={`badge ${
+                                alert.severity === 'high' ? 'badge-red'
+                                  : alert.severity === 'medium' ? 'badge-yellow'
+                                  : 'badge-blue'
+                              }`}>
+                                {alert.severity || 'normal'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`badge ${alert.responded ? 'badge-green' : 'badge-red'}`}>
+                                {alert.responded ? 'Responded' : 'Pending'}
+                              </span>
+                            </td>
+                            <td>
+                              {alert.responded && alert.respondedBy ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-white font-semibold text-sm">{alert.respondedBy}</span>
+                                  {alert.notes && (
+                                    <span className="text-white/45 text-xs italic">"{alert.notes}"</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-white/30 text-sm">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
               <Pagination
                 page={alertsSafePage}
                 totalPages={alertsTotalPages}

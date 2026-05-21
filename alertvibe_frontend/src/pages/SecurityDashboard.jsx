@@ -192,71 +192,122 @@ function SecurityDashboard() {
                 <p className="text-white/50 text-sm">No motorcycles found.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                <table className="w-full av-table">
-                  <thead>
-                    <tr>
-                      <th>Photo</th>
-                      <th>Owner</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                      <th>Plate</th>
-                      <th>Model</th>
-                      <th>Color</th>
-                      <th>Device Code</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMotorcycles.map((m) => (
-                      <tr key={m.id} className="cursor-pointer" onClick={() => setSelectedMotorcycle(m)}>
-                        <td>
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
-                               style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                            {m.ownerPhotoURL ? (
-                              <img src={m.ownerPhotoURL} alt={m.owner} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm"
-                                   style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
-                                {m.owner?.charAt(0)?.toUpperCase() || '?'}
-                              </div>
-                            )}
+              <>
+                {/* Mobile: cards */}
+                <div className="sm:hidden space-y-3">
+                  {filteredMotorcycles.map((m) => (
+                    <div key={m.id} className="rounded-xl overflow-hidden cursor-pointer hover:bg-white/5 transition-colors"
+                         style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+                         onClick={() => setSelectedMotorcycle(m)}>
+                      <div className="flex items-center gap-3 p-3">
+                        <div className="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden"
+                             style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                          {m.ownerPhotoURL ? (
+                            <img src={m.ownerPhotoURL} alt={m.owner} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm"
+                                 style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
+                              {m.owner?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-white font-bold text-sm">{m.owner}</p>
+                            <span className={`badge ${m.isActivated ? 'badge-green' : 'badge-red'}`}>
+                              {m.isActivated ? 'Active' : 'Inactive'}
+                            </span>
                           </div>
-                        </td>
-                        <td className="font-semibold text-white">{m.owner}</td>
-                        <td>
-                          {m.ownerEmail ? (
-                            <a href={`mailto:${m.ownerEmail}`} onClick={(e) => e.stopPropagation()}
-                               className="text-indigo-400 hover:text-indigo-300 text-xs transition-colors">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="badge badge-yellow">{m.plateNumber}</span>
+                            <span className="badge badge-blue">{m.deviceCode}</span>
+                          </div>
+                          <p className="text-white/50 text-xs mt-1">{m.model} · {m.color}</p>
+                          {m.ownerEmail && (
+                            <a href={`mailto:${m.ownerEmail}`} onClick={e => e.stopPropagation()}
+                               className="text-indigo-400 text-xs hover:text-indigo-300 block mt-0.5 truncate">
                               {m.ownerEmail}
                             </a>
-                          ) : <span className="text-white/25 text-xs">N/A</span>}
-                        </td>
-                        <td>
-                          {m.ownerPhone ? (
-                            <a href={`tel:${m.ownerPhone}`} onClick={(e) => e.stopPropagation()}
-                               className="badge badge-blue hover:opacity-80 transition-opacity inline-flex items-center gap-1">
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
-                              </svg>
-                              {m.ownerPhone}
-                            </a>
-                          ) : <span className="text-white/25 text-xs">N/A</span>}
-                        </td>
-                        <td><span className="badge badge-yellow">{m.plateNumber}</span></td>
-                        <td>{m.model}</td>
-                        <td>{m.color}</td>
-                        <td><span className="badge badge-blue">{m.deviceCode}</span></td>
-                        <td>
-                          <span className={`badge ${m.isActivated ? 'badge-green' : 'badge-red'}`}>
-                            {m.isActivated ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
+                          )}
+                        </div>
+                        {m.ownerPhone && (
+                          <a href={`tel:${m.ownerPhone}`} onClick={e => e.stopPropagation()}
+                             className="flex-shrink-0 badge badge-blue hover:opacity-80 transition-opacity">
+                            📞
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden sm:block overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <table className="w-full av-table">
+                    <thead>
+                      <tr>
+                        <th>Photo</th>
+                        <th>Owner</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Plate</th>
+                        <th>Model</th>
+                        <th>Color</th>
+                        <th>Device Code</th>
+                        <th>Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredMotorcycles.map((m) => (
+                        <tr key={m.id} className="cursor-pointer" onClick={() => setSelectedMotorcycle(m)}>
+                          <td>
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
+                                 style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                              {m.ownerPhotoURL ? (
+                                <img src={m.ownerPhotoURL} alt={m.owner} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center font-bold text-white text-sm"
+                                     style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
+                                  {m.owner?.charAt(0)?.toUpperCase() || '?'}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="font-semibold text-white">{m.owner}</td>
+                          <td>
+                            {m.ownerEmail ? (
+                              <a href={`mailto:${m.ownerEmail}`} onClick={(e) => e.stopPropagation()}
+                                 className="text-indigo-400 hover:text-indigo-300 text-xs transition-colors">
+                                {m.ownerEmail}
+                              </a>
+                            ) : <span className="text-white/25 text-xs">N/A</span>}
+                          </td>
+                          <td>
+                            {m.ownerPhone ? (
+                              <a href={`tel:${m.ownerPhone}`} onClick={(e) => e.stopPropagation()}
+                                 className="badge badge-blue hover:opacity-80 transition-opacity inline-flex items-center gap-1">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
+                                </svg>
+                                {m.ownerPhone}
+                              </a>
+                            ) : <span className="text-white/25 text-xs">N/A</span>}
+                          </td>
+                          <td><span className="badge badge-yellow">{m.plateNumber}</span></td>
+                          <td>{m.model}</td>
+                          <td>{m.color}</td>
+                          <td><span className="badge badge-blue">{m.deviceCode}</span></td>
+                          <td>
+                            <span className={`badge ${m.isActivated ? 'badge-green' : 'badge-red'}`}>
+                              {m.isActivated ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </main>

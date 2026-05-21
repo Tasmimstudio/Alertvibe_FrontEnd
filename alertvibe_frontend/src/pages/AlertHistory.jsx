@@ -345,72 +345,116 @@ const AlertHistory = () => {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full av-table">
-                  <thead>
-                    <tr>
-                      <th className="text-left">Date</th>
-                      <th className="text-left">Time</th>
-                      <th className="text-left">Device</th>
-                      <th className="text-left">Message</th>
-                      <th className="text-left">Response</th>
-                      <th className="text-center">Status</th>
-                      <th className="text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paged.map((alert) => (
-                      <tr key={alert.id}
-                          onClick={() => setSelectedAlert(alert)}
-                          className="cursor-pointer hover:bg-white/5 transition-colors">
-                        <td className="font-semibold">{alert.date}</td>
-                        <td className="text-white/60">{alert.time}</td>
-                        <td>
+              <>
+                {/* Mobile: card list */}
+                <div className="sm:hidden divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                  {paged.map((alert) => (
+                    <div key={alert.id} className="p-4 cursor-pointer hover:bg-white/5 transition-colors"
+                         onClick={() => setSelectedAlert(alert)}>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="badge badge-blue">{alert.motorcycle}</span>
-                        </td>
-                        <td>{alert.message}</td>
-                        <td>
-                          {alert.isResponded ? (
-                            <div className="flex flex-col gap-1">
-                              <span className="badge badge-green">✓ Responded</span>
-                              {alert.respondedBy && (
-                                <span className="text-white font-semibold text-xs">by {alert.respondedBy}</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="badge badge-red">Pending</span>
-                          )}
-                        </td>
-                        <td className="text-center" onClick={e => e.stopPropagation()}>
-                          <label className="flex items-center justify-center gap-2 cursor-pointer">
-                            <span className={`badge ${alert.isRead ? 'badge-green' : 'badge-red'}`}>
-                              {alert.isRead ? 'Read' : 'Unread'}
-                            </span>
-                            <input
-                              type="checkbox"
-                              checked={alert.isRead}
-                              onChange={() => toggleReadStatus(alert.id)}
-                              className="w-4 h-4 cursor-pointer accent-red-500"
-                            />
-                          </label>
-                        </td>
-                        <td className="text-center">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(alert.id); }}
-                            disabled={deletingId === alert.id}
-                            title="Delete alert"
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
-                          >
-                            {deletingId === alert.id
-                              ? <span className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
-                              : <TrashIcon />}
-                          </button>
-                        </td>
+                          <span className={`badge ${alert.isResponded ? 'badge-green' : 'badge-red'}`}>
+                            {alert.isResponded ? '✓ Responded' : 'Pending'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); handleDelete(alert.id); }}
+                          disabled={deletingId === alert.id}
+                          className="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                        >
+                          {deletingId === alert.id
+                            ? <span className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
+                            : <TrashIcon />}
+                        </button>
+                      </div>
+                      <p className="text-white/90 text-sm leading-snug mb-2">{alert.message}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-white/35 text-xs">{alert.date} · {alert.time}</span>
+                        <label className="flex items-center gap-1.5 cursor-pointer" onClick={e => e.stopPropagation()}>
+                          <span className={`badge text-xs ${alert.isRead ? 'badge-green' : 'badge-yellow'}`}>
+                            {alert.isRead ? 'Read' : 'Unread'}
+                          </span>
+                          <input type="checkbox" checked={alert.isRead}
+                                 onChange={() => toggleReadStatus(alert.id)}
+                                 className="w-4 h-4 cursor-pointer accent-red-500" />
+                        </label>
+                      </div>
+                      {alert.isResponded && alert.respondedBy && (
+                        <p className="text-white/40 text-xs mt-1.5">👮 {alert.respondedBy}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full av-table">
+                    <thead>
+                      <tr>
+                        <th className="text-left">Date</th>
+                        <th className="text-left">Time</th>
+                        <th className="text-left">Device</th>
+                        <th className="text-left">Message</th>
+                        <th className="text-left">Response</th>
+                        <th className="text-center">Status</th>
+                        <th className="text-center">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {paged.map((alert) => (
+                        <tr key={alert.id}
+                            onClick={() => setSelectedAlert(alert)}
+                            className="cursor-pointer hover:bg-white/5 transition-colors">
+                          <td className="font-semibold">{alert.date}</td>
+                          <td className="text-white/60">{alert.time}</td>
+                          <td>
+                            <span className="badge badge-blue">{alert.motorcycle}</span>
+                          </td>
+                          <td>{alert.message}</td>
+                          <td>
+                            {alert.isResponded ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="badge badge-green">✓ Responded</span>
+                                {alert.respondedBy && (
+                                  <span className="text-white font-semibold text-xs">by {alert.respondedBy}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="badge badge-red">Pending</span>
+                            )}
+                          </td>
+                          <td className="text-center" onClick={e => e.stopPropagation()}>
+                            <label className="flex items-center justify-center gap-2 cursor-pointer">
+                              <span className={`badge ${alert.isRead ? 'badge-green' : 'badge-red'}`}>
+                                {alert.isRead ? 'Read' : 'Unread'}
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={alert.isRead}
+                                onChange={() => toggleReadStatus(alert.id)}
+                                className="w-4 h-4 cursor-pointer accent-red-500"
+                              />
+                            </label>
+                          </td>
+                          <td className="text-center">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(alert.id); }}
+                              disabled={deletingId === alert.id}
+                              title="Delete alert"
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                            >
+                              {deletingId === alert.id
+                                ? <span className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
+                                : <TrashIcon />}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
             <Pagination
               page={safePage}

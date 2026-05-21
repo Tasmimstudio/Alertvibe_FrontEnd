@@ -374,7 +374,7 @@ function DeviceRegistration() {
               </div>
             )}
 
-            {/* Table */}
+            {/* List */}
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <div className="av-spinner" />
@@ -387,61 +387,115 @@ function DeviceRegistration() {
                 <button onClick={openAdd} className="btn-red text-sm px-5 py-2">Register First Motorcycle</button>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                <table className="w-full av-table">
-                  <thead>
-                    <tr>
-                      <th>Photo</th>
-                      <th>Plate</th>
-                      <th>Model</th>
-                      <th>Color</th>
-                      <th>Device Code</th>
-                      <th>Parking Location</th>
-                      <th className="text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {motorcycles.map((moto) => (
-                      <tr key={moto.id}
-                          style={selectedMotorcycle?.id === moto.id ? { outline: '2px solid rgba(99,102,241,0.5)' } : {}}>
-                        <td>
-                          <div onClick={() => handlePhotoClick(moto.id)}
-                               className="w-11 h-11 rounded-lg flex items-center justify-center cursor-pointer overflow-hidden hover:opacity-80 transition-all"
-                               style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
-                               title="Click to upload photo">
-                            {moto.photoURL ? (
-                              <img src={moto.photoURL} alt="Motorcycle" className="w-full h-full object-cover" />
-                            ) : (
-                              <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
+              <>
+                {/* Mobile: cards */}
+                <div className="sm:hidden space-y-3">
+                  {motorcycles.map((moto) => (
+                    <div key={moto.id} className="rounded-xl overflow-hidden"
+                         style={{
+                           background: 'rgba(255,255,255,0.04)',
+                           border: selectedMotorcycle?.id === moto.id
+                             ? '1px solid rgba(99,102,241,0.6)'
+                             : '1px solid rgba(255,255,255,0.1)',
+                         }}>
+                      <div className="flex gap-3 p-3">
+                        {/* Photo */}
+                        <div onClick={() => handlePhotoClick(moto.id)}
+                             className="w-16 h-16 rounded-lg flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-all flex items-center justify-center"
+                             style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                          {moto.photoURL ? (
+                            <img src={moto.photoURL} alt="Motorcycle" className="w-full h-full object-cover" />
+                          ) : (
+                            <svg className="w-6 h-6 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                          )}
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-bold text-sm">{moto.plateNumber}</p>
+                          <p className="text-white/60 text-xs">{moto.model} · {moto.color}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="badge badge-blue">{moto.deviceCode}</span>
+                            {moto.parkingLocation && (
+                              <span className="text-white/40 text-xs">{moto.parkingLocation}</span>
                             )}
                           </div>
-                        </td>
-                        <td className="font-bold text-white">{moto.plateNumber}</td>
-                        <td>{moto.model}</td>
-                        <td>{moto.color}</td>
-                        <td><span className="badge badge-blue">{moto.deviceCode}</span></td>
-                        <td className="text-white/60 text-sm">{moto.parkingLocation || <span className="text-white/25">—</span>}</td>
-                        <td>
-                          <div className="flex justify-center gap-1.5">
-                            <button onClick={() => openEdit(moto)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
-                              style={{ background: 'rgba(99,102,241,0.7)' }}>Edit</button>
-                            <button onClick={() => handleSelectStatus(moto)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
-                              style={{ background: 'rgba(245,158,11,0.7)' }}>Status</button>
-                            <button onClick={() => handleDelete(moto)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
-                              style={{ background: 'rgba(239,68,68,0.7)' }}>Delete</button>
-                          </div>
-                        </td>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 px-3 pb-3">
+                        <button onClick={() => openEdit(moto)}
+                          className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
+                          style={{ background: 'rgba(99,102,241,0.7)' }}>Edit</button>
+                        <button onClick={() => handleSelectStatus(moto)}
+                          className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
+                          style={{ background: 'rgba(245,158,11,0.7)' }}>Status</button>
+                        <button onClick={() => handleDelete(moto)}
+                          className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
+                          style={{ background: 'rgba(239,68,68,0.7)' }}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden sm:block overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <table className="w-full av-table">
+                    <thead>
+                      <tr>
+                        <th>Photo</th>
+                        <th>Plate</th>
+                        <th>Model</th>
+                        <th>Color</th>
+                        <th>Device Code</th>
+                        <th>Parking Location</th>
+                        <th className="text-center">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {motorcycles.map((moto) => (
+                        <tr key={moto.id}
+                            style={selectedMotorcycle?.id === moto.id ? { outline: '2px solid rgba(99,102,241,0.5)' } : {}}>
+                          <td>
+                            <div onClick={() => handlePhotoClick(moto.id)}
+                                 className="w-11 h-11 rounded-lg flex items-center justify-center cursor-pointer overflow-hidden hover:opacity-80 transition-all"
+                                 style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+                                 title="Click to upload photo">
+                              {moto.photoURL ? (
+                                <img src={moto.photoURL} alt="Motorcycle" className="w-full h-full object-cover" />
+                              ) : (
+                                <svg className="w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                              )}
+                            </div>
+                          </td>
+                          <td className="font-bold text-white">{moto.plateNumber}</td>
+                          <td>{moto.model}</td>
+                          <td>{moto.color}</td>
+                          <td><span className="badge badge-blue">{moto.deviceCode}</span></td>
+                          <td className="text-white/60 text-sm">{moto.parkingLocation || <span className="text-white/25">—</span>}</td>
+                          <td>
+                            <div className="flex justify-center gap-1.5">
+                              <button onClick={() => openEdit(moto)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
+                                style={{ background: 'rgba(99,102,241,0.7)' }}>Edit</button>
+                              <button onClick={() => handleSelectStatus(moto)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
+                                style={{ background: 'rgba(245,158,11,0.7)' }}>Status</button>
+                              <button onClick={() => handleDelete(moto)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
+                                style={{ background: 'rgba(239,68,68,0.7)' }}>Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </main>

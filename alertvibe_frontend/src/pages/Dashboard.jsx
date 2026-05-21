@@ -529,8 +529,22 @@ const Dashboard = () => {
                         {allMotorcycles.map((moto) => (
                           <div key={moto.id} className="rounded-2xl overflow-hidden"
                                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+
+                            {/* Photo — full-width banner on mobile */}
+                            <div className="sm:hidden w-full h-48 overflow-hidden"
+                                 style={{ background: 'rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                              {moto.photoURL ? (
+                                <img src={moto.photoURL} alt={moto.plateNumber} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                                  <span className="text-4xl">🏍️</span>
+                                  <span className="text-white/25 text-xs">No photo</span>
+                                </div>
+                              )}
+                            </div>
+
                             <div className="flex gap-4 p-4">
-                              {/* Info left side */}
+                              {/* Info */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                                   <span className={`badge ${moto.isActivated !== false ? 'badge-green' : 'badge-red'}`}>
@@ -538,7 +552,7 @@ const Dashboard = () => {
                                   </span>
                                   <span className="badge badge-blue">{moto.deviceCode || 'N/A'}</span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   {[
                                     { label: 'Plate Number', value: moto.plateNumber },
                                     { label: 'Model',        value: moto.model },
@@ -561,12 +575,11 @@ const Dashboard = () => {
                                 )}
                               </div>
 
-                              {/* Photo right side */}
-                              <div className="flex-shrink-0 w-36 h-36 sm:w-52 sm:h-52 rounded-xl overflow-hidden self-center mt-8"
+                              {/* Photo — right side on sm+ only */}
+                              <div className="hidden sm:block flex-shrink-0 w-48 h-48 rounded-xl overflow-hidden self-center"
                                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
                                 {moto.photoURL ? (
-                                  <img src={moto.photoURL} alt={moto.plateNumber}
-                                       className="w-full h-full object-cover" />
+                                  <img src={moto.photoURL} alt={moto.plateNumber} className="w-full h-full object-cover" />
                                 ) : (
                                   <div className="w-full h-full flex flex-col items-center justify-center gap-1">
                                     <span className="text-3xl">🏍️</span>

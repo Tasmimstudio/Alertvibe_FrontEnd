@@ -325,52 +325,94 @@ function SecurityAlertLog() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                <table className="w-full av-table">
-                  <thead>
-                    <tr>
-                      <th>Severity</th>
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Device</th>
-                      <th>Owner</th>
-                      <th>Phone</th>
-                      <th>Message</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedAlerts.map((alertItem) => (
-                      <tr key={alertItem.id} className="cursor-pointer"
-                          onClick={() => handleRowClick(alertItem)}
-                          style={!alertItem.isResponded ? { borderLeft: '3px solid rgba(239,68,68,0.5)' } : {}}>
-                        <td><SeverityBadge severity={alertItem.severity} /></td>
-                        <td className="text-white/60 text-sm">{alertItem.date}</td>
-                        <td className="text-white/60 text-sm">{alertItem.time}</td>
-                        <td><span className="badge badge-blue">{alertItem.motorcycle}</span></td>
-                        <td className="font-semibold text-white">{alertItem.ownerName}</td>
-                        <td>
-                          {alertItem.ownerPhone ? (
-                            <a href={`tel:${alertItem.ownerPhone}`} onClick={(e) => e.stopPropagation()}
-                               className="badge badge-green hover:opacity-80 transition-opacity inline-flex items-center gap-1">
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
-                              </svg>
-                              Call
-                            </a>
-                          ) : <span className="text-white/25 text-xs">N/A</span>}
-                        </td>
-                        <td className="max-w-xs truncate">{alertItem.message}</td>
-                        <td>
+              <>
+                {/* Mobile: cards */}
+                <div className="sm:hidden space-y-3">
+                  {pagedAlerts.map((alertItem) => (
+                    <div key={alertItem.id}
+                         className="rounded-xl p-4 cursor-pointer hover:bg-white/5 transition-colors"
+                         style={{
+                           background: 'rgba(255,255,255,0.04)',
+                           border: !alertItem.isResponded
+                             ? '1px solid rgba(239,68,68,0.4)'
+                             : '1px solid rgba(255,255,255,0.1)',
+                         }}
+                         onClick={() => handleRowClick(alertItem)}>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <SeverityBadge severity={alertItem.severity} />
                           <span className={`badge ${alertItem.isResponded ? 'badge-green' : 'badge-red'}`}>
                             {alertItem.isResponded ? 'Responded' : 'Pending'}
                           </span>
-                        </td>
+                        </div>
+                        <span className="text-white/35 text-xs flex-shrink-0">{alertItem.time}</span>
+                      </div>
+                      <p className="text-white/85 text-sm leading-snug mb-2">{alertItem.message}</p>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="badge badge-blue">{alertItem.motorcycle}</span>
+                          <span className="text-white/50 text-xs">{alertItem.ownerName}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white/35 text-xs">{alertItem.date}</span>
+                          {alertItem.ownerPhone && (
+                            <a href={`tel:${alertItem.ownerPhone}`} onClick={e => e.stopPropagation()}
+                               className="badge badge-green hover:opacity-80 transition-opacity">📞</a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden sm:block overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <table className="w-full av-table">
+                    <thead>
+                      <tr>
+                        <th>Severity</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Device</th>
+                        <th>Owner</th>
+                        <th>Phone</th>
+                        <th>Message</th>
+                        <th>Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {pagedAlerts.map((alertItem) => (
+                        <tr key={alertItem.id} className="cursor-pointer"
+                            onClick={() => handleRowClick(alertItem)}
+                            style={!alertItem.isResponded ? { borderLeft: '3px solid rgba(239,68,68,0.5)' } : {}}>
+                          <td><SeverityBadge severity={alertItem.severity} /></td>
+                          <td className="text-white/60 text-sm">{alertItem.date}</td>
+                          <td className="text-white/60 text-sm">{alertItem.time}</td>
+                          <td><span className="badge badge-blue">{alertItem.motorcycle}</span></td>
+                          <td className="font-semibold text-white">{alertItem.ownerName}</td>
+                          <td>
+                            {alertItem.ownerPhone ? (
+                              <a href={`tel:${alertItem.ownerPhone}`} onClick={(e) => e.stopPropagation()}
+                                 className="badge badge-green hover:opacity-80 transition-opacity inline-flex items-center gap-1">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.82 19.79 19.79 0 010 2.18 2 2 0 012 0h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
+                                </svg>
+                                Call
+                              </a>
+                            ) : <span className="text-white/25 text-xs">N/A</span>}
+                          </td>
+                          <td className="max-w-xs truncate">{alertItem.message}</td>
+                          <td>
+                            <span className={`badge ${alertItem.isResponded ? 'badge-green' : 'badge-red'}`}>
+                              {alertItem.isResponded ? 'Responded' : 'Pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
             <Pagination
               page={safePage}
