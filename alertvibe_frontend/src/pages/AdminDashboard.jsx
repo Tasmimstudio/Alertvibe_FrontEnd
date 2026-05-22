@@ -773,8 +773,9 @@ function AdminDashboard() {
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className="badge badge-blue">{alert.deviceId || 'N/A'}</span>
                           <span className={`badge ${
-                            alert.severity === 'high' ? 'badge-red'
-                              : alert.severity === 'medium' ? 'badge-yellow'
+                            alert.severity === 'strong' ? 'badge-red'
+                              : alert.severity === 'moderate' ? 'badge-yellow'
+                              : alert.severity === 'light' ? 'badge-green'
                               : 'badge-blue'
                           }`}>{alert.severity || 'normal'}</span>
                           <span className={`badge ${alert.responded ? 'badge-green' : 'badge-red'}`}>
@@ -814,8 +815,9 @@ function AdminDashboard() {
                             <td>{alert.message || 'Vibration detected'}</td>
                             <td>
                               <span className={`badge ${
-                                alert.severity === 'high' ? 'badge-red'
-                                  : alert.severity === 'medium' ? 'badge-yellow'
+                                alert.severity === 'strong' ? 'badge-red'
+                                  : alert.severity === 'moderate' ? 'badge-yellow'
+                                  : alert.severity === 'light' ? 'badge-green'
                                   : 'badge-blue'
                               }`}>
                                 {alert.severity || 'normal'}
