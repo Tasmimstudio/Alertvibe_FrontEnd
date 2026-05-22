@@ -242,9 +242,9 @@ const Dashboard = () => {
   const unreadCount = alerts.filter(a => !a.isRead).length;
 
   const severityColor = (s) => {
-    if (s === 'high') return '#ef4444';
+    if (s === 'hard') return '#ef4444';
     if (s === 'medium') return '#f59e0b';
-    return '#60a5fa';
+    return '#4ade80';
   };
 
   /* ── Connection status chip ── */
@@ -411,87 +411,120 @@ const Dashboard = () => {
               </div>
             ) : (
               <>
-                {/* Last Alert — single pulse card */}
+                {/* Last Alert — individual cards per severity */}
                 {activeTab === 'lastAlert' && (() => {
-                  void tick; // consumed so re-render fires every 30 s
-                  const activeGroup = buildActiveGroup(alerts);
-                  const minsLeft = activeGroup ? Math.max(0, Math.ceil((activeGroup.expiresAt - Date.now()) / 60000)) : 0;
+                  void tick;
+                  const TEN_MIN = 10 * 60 * 1000;
+                  const recentAlerts = alerts.filter(a => a.timestampMs && Date.now() - a.timestampMs <= TEN_MIN);
+
+                  const severityStyle = (s) => {
+                    if (s === 'hard') return {
+                      bg: 'linear-gradient(135deg,rgba(239,68,68,0.14),rgba(220,38,38,0.08))',
+                      border: 'rgba(239,68,68,0.45)',
+                      shadow: 'rgba(239,68,68,0.15)',
+                      dot: '#ef4444',
+                      dotPing: 'rgba(239,68,68,0.25)',
+                      badge: 'badge-red',
+                      icon: '🚨',
+                      linkColor: 'text-red-400 hover:text-red-300',
+                    };
+                    if (s === 'medium') return {
+                      bg: 'linear-gradient(135deg,rgba(251,191,36,0.14),rgba(245,158,11,0.08))',
+                      border: 'rgba(251,191,36,0.45)',
+                      shadow: 'rgba(251,191,36,0.15)',
+                      dot: '#fbbf24',
+                      dotPing: 'rgba(251,191,36,0.25)',
+                      badge: 'badge-yellow',
+                      icon: '⚠️',
+                      linkColor: 'text-yellow-400 hover:text-yellow-300',
+                    };
+                    return {
+                      bg: 'linear-gradient(135deg,rgba(74,222,128,0.14),rgba(34,197,94,0.08))',
+                      border: 'rgba(74,222,128,0.45)',
+                      shadow: 'rgba(74,222,128,0.15)',
+                      dot: '#4ade80',
+                      dotPing: 'rgba(74,222,128,0.25)',
+                      badge: 'badge-green',
+                      icon: '📳',
+                      linkColor: 'text-green-400 hover:text-green-300',
+                    };
+                  };
+
                   return (
                     <div className="space-y-4">
                       <h2 className="text-white font-bold text-lg">Alert Status</h2>
 
-                      {activeGroup ? (
-                        /* ── Active tampering alert ── */
-                        <div className="relative rounded-2xl p-5 overflow-hidden"
-                             style={{
-                               background: 'linear-gradient(135deg,rgba(239,68,68,0.12),rgba(220,38,38,0.07))',
-                               border: '1px solid rgba(239,68,68,0.4)',
-                               boxShadow: '0 0 40px rgba(239,68,68,0.12)',
-                             }}>
-                          {/* Pulsing dot */}
-                          <div className="absolute top-5 right-5 flex items-center justify-center">
-                            <span className="absolute w-12 h-12 rounded-full animate-ping"
-                                  style={{ background: 'rgba(239,68,68,0.2)' }} />
-                            <span className="relative w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-black shadow-lg">!</span>
-                          </div>
+                      {recentAlerts.length > 0 ? (
+                        recentAlerts.map((alert) => {
+                          const st = severityStyle(alert.severity);
+                          const minsLeft = Math.max(0, Math.ceil(((alert.timestampMs + TEN_MIN) - Date.now()) / 60000));
+                          return (
+                            <div key={alert.id} className="relative rounded-2xl p-5 overflow-hidden"
+                                 style={{
+                                   background: st.bg,
+                                   border: `1px solid ${st.border}`,
+                                   boxShadow: `0 0 40px ${st.shadow}`,
+                                 }}>
+                              {/* Pulsing dot */}
+                              <div className="absolute top-5 right-5 flex items-center justify-center">
+                                <span className="absolute w-12 h-12 rounded-full animate-ping"
+                                      style={{ background: st.dotPing }} />
+                                <span className="relative w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-black shadow-lg"
+                                      style={{ background: st.dot }}>!</span>
+                              </div>
 
-                          <div className="pr-16">
-                            <div className="flex items-center gap-2 mb-3 flex-wrap">
-                              <span className="text-2xl">🚨</span>
-                              <span className={`badge ${
-                                activeGroup.latest.severity === 'high' ? 'badge-red'
-                                  : activeGroup.latest.severity === 'medium' ? 'badge-yellow'
-                                  : 'badge-blue'
-                              }`}>
-                                {(activeGroup.latest.severity || 'alert').toUpperCase()}
-                              </span>
-                              {activeGroup.count > 1 && (
-                                <span className="badge badge-yellow">{activeGroup.count} pulses</span>
-                              )}
-                            </div>
-                            <p className="text-white font-bold text-sm leading-snug mb-2">{activeGroup.latest.message}</p>
-                            <p className="text-white/45 text-xs">Device: {activeGroup.latest.deviceId || 'Unknown'}</p>
-                            <p className="text-white/35 text-xs mt-1">
-                              Last pulse: {activeGroup.latest.date} · Auto-clears in {minsLeft} min
-                            </p>
-                          </div>
-
-                          {/* Security response section */}
-                          <div className="mt-4 rounded-xl p-3"
-                               style={{
-                                 background: activeGroup.latest.isResponded ? 'rgba(74,222,128,0.08)' : 'rgba(239,68,68,0.08)',
-                                 border: `1px solid ${activeGroup.latest.isResponded ? 'rgba(74,222,128,0.25)' : 'rgba(239,68,68,0.2)'}`,
-                               }}>
-                            {activeGroup.latest.isResponded ? (
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-base">✅</span>
-                                  <span className="text-green-400 font-bold text-sm">Security Has Responded</span>
+                              <div className="pr-16">
+                                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                  <span className="text-2xl">{st.icon}</span>
+                                  <span className={`badge ${st.badge}`}>
+                                    {(alert.severity || 'alert').toUpperCase()}
+                                  </span>
                                 </div>
-                                {activeGroup.latest.respondedBy && (
-                                  <p className="text-white font-semibold text-sm">
-                                    Responded by: <span className="text-green-300">{activeGroup.latest.respondedBy}</span>
-                                  </p>
-                                )}
-                                {activeGroup.latest.notes && (
-                                  <p className="text-white/60 text-xs italic">"{activeGroup.latest.notes}"</p>
-                                )}
+                                <p className="text-white font-bold text-sm leading-snug mb-2">{alert.message}</p>
+                                <p className="text-white/45 text-xs">Device: {alert.deviceId || 'Unknown'}</p>
+                                <p className="text-white/35 text-xs mt-1">
+                                  {alert.date} · Auto-clears in {minsLeft} min
+                                </p>
                               </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <span className="text-base">⏳</span>
-                                <span className="text-red-400 font-semibold text-sm">Awaiting Security Response</span>
-                              </div>
-                            )}
-                          </div>
 
-                          <div className="mt-3">
-                            <button onClick={() => navigate('/history')}
-                                    className="text-red-400 hover:text-red-300 text-xs font-semibold transition-colors">
-                              View full alert log →
-                            </button>
-                          </div>
-                        </div>
+                              {/* Security response */}
+                              <div className="mt-4 rounded-xl p-3"
+                                   style={{
+                                     background: alert.isResponded ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.05)',
+                                     border: `1px solid ${alert.isResponded ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.1)'}`,
+                                   }}>
+                                {alert.isResponded ? (
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-base">✅</span>
+                                      <span className="text-green-400 font-bold text-sm">Security Has Responded</span>
+                                    </div>
+                                    {alert.respondedBy && (
+                                      <p className="text-white font-semibold text-sm">
+                                        Responded by: <span className="text-green-300">{alert.respondedBy}</span>
+                                      </p>
+                                    )}
+                                    {alert.notes && (
+                                      <p className="text-white/60 text-xs italic">"{alert.notes}"</p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-base">⏳</span>
+                                    <span className="text-white/50 font-semibold text-sm">Awaiting Security Response</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="mt-3">
+                                <button onClick={() => navigate('/history')}
+                                        className={`text-xs font-semibold transition-colors ${st.linkColor}`}>
+                                  View full alert log →
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
                       ) : (
                         /* ── Secure / clear state ── */
                         <div className="rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center"
