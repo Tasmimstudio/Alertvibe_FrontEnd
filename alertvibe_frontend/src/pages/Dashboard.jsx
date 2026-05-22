@@ -242,8 +242,8 @@ const Dashboard = () => {
   const unreadCount = alerts.filter(a => !a.isRead).length;
 
   const severityColor = (s) => {
-    if (s === 'hard') return '#ef4444';
-    if (s === 'medium') return '#f59e0b';
+    if (s === 'strong') return '#ef4444';
+    if (s === 'moderate') return '#f59e0b';
     return '#4ade80';
   };
 
@@ -418,7 +418,7 @@ const Dashboard = () => {
                   const recentAlerts = alerts.filter(a => a.timestampMs && Date.now() - a.timestampMs <= TEN_MIN);
 
                   const severityStyle = (s) => {
-                    if (s === 'hard') return {
+                    if (s === 'strong') return {
                       bg: 'linear-gradient(135deg,rgba(239,68,68,0.14),rgba(220,38,38,0.08))',
                       border: 'rgba(239,68,68,0.45)',
                       shadow: 'rgba(239,68,68,0.15)',
@@ -428,7 +428,7 @@ const Dashboard = () => {
                       icon: '🚨',
                       linkColor: 'text-red-400 hover:text-red-300',
                     };
-                    if (s === 'medium') return {
+                    if (s === 'moderate') return {
                       bg: 'linear-gradient(135deg,rgba(251,191,36,0.14),rgba(245,158,11,0.08))',
                       border: 'rgba(251,191,36,0.45)',
                       shadow: 'rgba(251,191,36,0.15)',
