@@ -83,6 +83,7 @@ const AlertHistory = () => {
         time: formatDate(alert.timestamp, 'time'),
         motorcycle: alert.deviceId || 'Unknown',
         message: alert.message || 'VIBRATION DETECTED',
+        severity: alert.severity || 'light',
         isRead: alert.responded || readIds.has(alert.id),
         isResponded: alert.responded || false,
         respondedBy: alert.respondedBy || null,
@@ -354,6 +355,11 @@ const AlertHistory = () => {
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="badge badge-blue">{alert.motorcycle}</span>
+                          <span className={`badge ${
+                            alert.severity === 'strong' ? 'badge-red'
+                              : alert.severity === 'moderate' ? 'badge-yellow'
+                              : 'badge-green'
+                          }`}>{(alert.severity || 'light').toUpperCase()}</span>
                           <span className={`badge ${alert.isResponded ? 'badge-green' : 'badge-red'}`}>
                             {alert.isResponded ? '✓ Responded' : 'Pending'}
                           </span>
@@ -395,6 +401,7 @@ const AlertHistory = () => {
                         <th className="text-left">Date</th>
                         <th className="text-left">Time</th>
                         <th className="text-left">Device</th>
+                        <th className="text-left">Severity</th>
                         <th className="text-left">Message</th>
                         <th className="text-left">Response</th>
                         <th className="text-center">Status</th>
@@ -410,6 +417,13 @@ const AlertHistory = () => {
                           <td className="text-white/60">{alert.time}</td>
                           <td>
                             <span className="badge badge-blue">{alert.motorcycle}</span>
+                          </td>
+                          <td>
+                            <span className={`badge ${
+                              alert.severity === 'strong' ? 'badge-red'
+                                : alert.severity === 'moderate' ? 'badge-yellow'
+                                : 'badge-green'
+                            }`}>{(alert.severity || 'light').toUpperCase()}</span>
                           </td>
                           <td>{alert.message}</td>
                           <td>
