@@ -418,7 +418,8 @@ const Dashboard = () => {
                   const recentAlerts = alerts.filter(a => a.timestampMs && Date.now() - a.timestampMs <= TEN_MIN);
 
                   const severityStyle = (s) => {
-                    if (s === 'strong') return {
+                    const v = s?.toLowerCase();
+                    if (v === 'strong' || v === 'critical' || v === 'hard' || v === 'high') return {
                       bg: 'linear-gradient(135deg,rgba(239,68,68,0.14),rgba(220,38,38,0.08))',
                       border: 'rgba(239,68,68,0.45)',
                       shadow: 'rgba(239,68,68,0.15)',
@@ -428,7 +429,7 @@ const Dashboard = () => {
                       icon: '🚨',
                       linkColor: 'text-red-400 hover:text-red-300',
                     };
-                    if (s === 'moderate') return {
+                    if (v === 'moderate' || v === 'medium') return {
                       bg: 'linear-gradient(135deg,rgba(251,191,36,0.14),rgba(245,158,11,0.08))',
                       border: 'rgba(251,191,36,0.45)',
                       shadow: 'rgba(251,191,36,0.15)',

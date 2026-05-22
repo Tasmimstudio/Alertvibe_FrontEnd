@@ -773,11 +773,10 @@ function AdminDashboard() {
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <span className="badge badge-blue">{alert.deviceId || 'N/A'}</span>
                           <span className={`badge ${
-                            alert.severity === 'strong' ? 'badge-red'
-                              : alert.severity === 'moderate' ? 'badge-yellow'
-                              : alert.severity === 'light' ? 'badge-green'
-                              : 'badge-blue'
-                          }`}>{alert.severity || 'normal'}</span>
+                            ['strong','critical','hard','high'].includes(alert.severity) ? 'badge-red'
+                              : ['moderate','medium'].includes(alert.severity) ? 'badge-yellow'
+                              : 'badge-green'
+                          }`}>{alert.severity || 'light'}</span>
                           <span className={`badge ${alert.responded ? 'badge-green' : 'badge-red'}`}>
                             {alert.responded ? 'Responded' : 'Pending'}
                           </span>
@@ -815,12 +814,11 @@ function AdminDashboard() {
                             <td>{alert.message || 'Vibration detected'}</td>
                             <td>
                               <span className={`badge ${
-                                alert.severity === 'strong' ? 'badge-red'
-                                  : alert.severity === 'moderate' ? 'badge-yellow'
-                                  : alert.severity === 'light' ? 'badge-green'
-                                  : 'badge-blue'
+                                ['strong','critical','hard','high'].includes(alert.severity) ? 'badge-red'
+                                  : ['moderate','medium'].includes(alert.severity) ? 'badge-yellow'
+                                  : 'badge-green'
                               }`}>
-                                {alert.severity || 'normal'}
+                                {alert.severity || 'light'}
                               </span>
                             </td>
                             <td>

@@ -25,13 +25,14 @@ const LogoutIcon = () => (
 );
 
 function SeverityBadge({ severity }) {
-  const map = {
-    strong: 'badge-red',
-    moderate: 'badge-yellow',
-    light: 'badge-green',
-  };
+  const v = severity?.toLowerCase();
+  const cls = (v === 'strong' || v === 'critical' || v === 'hard' || v === 'high')
+    ? 'badge-red'
+    : (v === 'moderate' || v === 'medium')
+      ? 'badge-yellow'
+      : 'badge-green';
   return (
-    <span className={`badge ${map[severity] || 'badge-blue'}`}>
+    <span className={`badge ${cls}`}>
       {severity?.toUpperCase() || 'LIGHT'}
     </span>
   );

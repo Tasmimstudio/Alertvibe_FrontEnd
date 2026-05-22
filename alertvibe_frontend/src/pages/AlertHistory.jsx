@@ -10,6 +10,14 @@ import { formatDate } from '../utils/formatDate';
 
 const PAGE_SIZE = 15;
 
+const severityBadgeClass = (s) => {
+  if (!s) return 'badge-green';
+  const v = s.toLowerCase();
+  if (v === 'strong' || v === 'critical' || v === 'hard' || v === 'high') return 'badge-red';
+  if (v === 'moderate' || v === 'medium') return 'badge-yellow';
+  return 'badge-green'; // light or anything else
+};
+
 const readKey = (uid) => `alertvibe:read:${uid}`;
 const getReadIds = (uid) => {
   try {
@@ -355,11 +363,9 @@ const AlertHistory = () => {
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="badge badge-blue">{alert.motorcycle}</span>
-                          <span className={`badge ${
-                            alert.severity === 'strong' ? 'badge-red'
-                              : alert.severity === 'moderate' ? 'badge-yellow'
-                              : 'badge-green'
-                          }`}>{(alert.severity || 'light').toUpperCase()}</span>
+                          <span className={`badge ${severityBadgeClass(alert.severity)}`}>
+                            {(alert.severity || 'light').toUpperCase()}
+                          </span>
                           <span className={`badge ${alert.isResponded ? 'badge-green' : 'badge-red'}`}>
                             {alert.isResponded ? '✓ Responded' : 'Pending'}
                           </span>
@@ -419,11 +425,9 @@ const AlertHistory = () => {
                             <span className="badge badge-blue">{alert.motorcycle}</span>
                           </td>
                           <td>
-                            <span className={`badge ${
-                              alert.severity === 'strong' ? 'badge-red'
-                                : alert.severity === 'moderate' ? 'badge-yellow'
-                                : 'badge-green'
-                            }`}>{(alert.severity || 'light').toUpperCase()}</span>
+                            <span className={`badge ${severityBadgeClass(alert.severity)}`}>
+                              {(alert.severity || 'light').toUpperCase()}
+                            </span>
                           </td>
                           <td>{alert.message}</td>
                           <td>
