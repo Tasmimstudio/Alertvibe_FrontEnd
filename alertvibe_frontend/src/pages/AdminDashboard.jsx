@@ -595,9 +595,6 @@ function AdminDashboard() {
                                   <p className="text-white text-xs font-semibold">{moto.plateNumber}</p>
                                   <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
                                 </div>
-                                <span className={`badge text-xs ${moto.isActivated !== false ? 'badge-green' : 'badge-red'}`}>
-                                  {moto.isActivated !== false ? 'Active' : 'Inactive'}
-                                </span>
                               </div>
                             ))}
                           </div>
@@ -690,14 +687,9 @@ function AdminDashboard() {
                               {user.motorcycles?.length > 0 ? (
                                 <div className="flex flex-col gap-2">
                                   {user.motorcycles.map(moto => (
-                                    <div key={moto.id} className="flex items-center gap-2">
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-white text-xs leading-tight">{moto.plateNumber}</p>
-                                        <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
-                                      </div>
-                                      <span className={`badge text-xs ${moto.isActivated !== false ? 'badge-green' : 'badge-red'}`}>
-                                        {moto.isActivated !== false ? 'Active' : 'Inactive'}
-                                      </span>
+                                    <div key={moto.id}>
+                                      <p className="font-semibold text-white text-xs leading-tight">{moto.plateNumber}</p>
+                                      <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
                                     </div>
                                   ))}
                                 </div>
