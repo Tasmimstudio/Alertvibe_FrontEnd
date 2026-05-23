@@ -63,11 +63,11 @@ Preferences prefs;
 #define HIGH_THRESHOLD  6    // 6+   pulses → strong   (hard/repeated shake)
 
 // Timing (milliseconds)
-#define DEBOUNCE_MS     20
+#define DEBOUNCE_MS     150
 #define COOLDOWN_MS     5000
 #define WIFI_TIMEOUT    20000
-#define LED_HOLD_MS     100
-#define PULSE_WINDOW_MS 3000
+#define LED_HOLD_MS     300
+#define PULSE_WINDOW_MS 4000
 
 // ─── State ───────────────────────────────────────────────────────────────────
 unsigned long lastAlertTime     = 0;
