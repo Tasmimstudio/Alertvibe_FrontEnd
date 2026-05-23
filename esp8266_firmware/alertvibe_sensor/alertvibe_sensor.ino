@@ -16,9 +16,9 @@
  *   (Each LED anode → pin through 220Ω resistor, cathode → GND)
  *
  * Detection levels:
- *   2+  pulses → LOW    (BLUE GPIO16 on)
- *   3+  pulses → MEDIUM (YELLOW on)
- *   5+  pulses → HARD   (RED on, alert sent)
+ *   2–3  pulses → LOW    (BLUE GPIO16 on,  low alert sent after window)
+ *   4–5  pulses → MEDIUM (YELLOW on,       medium alert sent after window)
+ *   6+   pulses → HIGH   (RED on,          high/critical alert sent immediately)
  */
 
 #include <WiFi.h>
@@ -57,10 +57,10 @@ Preferences prefs;
 #define LED_RED         18   // GPIO18 — Hard / critical threat
 #define LED_BLUE_SAFE   19   // GPIO19 — Safe / device working
 
-// Detection thresholds (pulse count)
-#define LOW_THRESHOLD   1    // 1+  pulses  → low
-#define MED_THRESHOLD   2    // 2+  pulses  → medium
-#define HIGH_THRESHOLD  3    // 3+  pulses  → alert (lowered for testing; set to 5 for production)
+// Detection thresholds (pulse count within PULSE_WINDOW_MS)
+#define LOW_THRESHOLD   2    // 2–3  pulses → low    (1 shake)
+#define MED_THRESHOLD   4    // 4–5  pulses → medium (2 shakes within window)
+#define HIGH_THRESHOLD  6    // 6+   pulses → high   (3+ shakes within window)
 
 // Timing (milliseconds)
 #define DEBOUNCE_MS     20
@@ -75,6 +75,7 @@ unsigned long lastVibrationTime = 0;
 unsigned long pulseWindowStart  = 0;
 bool          vibrating         = false;
 int           pulseCount        = 0;
+int           lastSentLevel     = 0;   // highest level already alerted in current window: 0=none 1=low 2=med 3=high
 int           sensorTriggerLevel = LOW;  // auto-detected in setup()
 
 // ─── NVS Credential Helpers ───────────────────────────────────────────────────
@@ -232,8 +233,11 @@ bool sendAlert(int count) {
   } else if (count >= HIGH_THRESHOLD) {
     sev = "high";
     msg = "Strong vibration detected. Possible tampering in progress!";
-  } else {
+  } else if (count >= MED_THRESHOLD) {
     sev = "medium";
+    msg = "Moderate vibration detected. Check on your motorcycle.";
+  } else {
+    sev = "low";
     msg = "Low-level vibration detected. Stay alert.";
   }
 
@@ -325,18 +329,8 @@ void setup() {
 
 // ─── Main Loop ────────────────────────────────────────────────────────────────
 void loop() {
-  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == sensorTriggerLevel);
+  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == LOW);
   unsigned long now    = millis();
-
-  // ── Periodic WiFi reconnect (every 30s) ─────────────────────────────────
-  static unsigned long lastWifiCheck = 0;
-  if (now - lastWifiCheck > 30000) {
-    lastWifiCheck = now;
-    if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("WiFi dropped — reconnecting");
-      connectWiFi();
-    }
-  }
 
   // ── Count pulses ────────────────────────────────────────────────────────
   if (sensorTriggered) {
@@ -348,28 +342,29 @@ void loop() {
       if (now - pulseWindowStart > PULSE_WINDOW_MS) {
         pulseCount       = 0;
         pulseWindowStart = now;
+        // lastSentLevel intentionally NOT reset — escalation persists across windows
       }
 
       pulseCount++;
       Serial.print("Pulse! Count: ");
       Serial.println(pulseCount);
 
-      // Update LEDs based on detection level
+      // LED reflects current level (only lights up at LOW_THRESHOLD+)
       if (pulseCount >= HIGH_THRESHOLD) {
         allLedsOff();
         digitalWrite(LED_GREEN, HIGH);
-        digitalWrite(LED_RED,   HIGH);        // HARD — critical threat
-        Serial.println("!! HARD — Critical Threat !!");
+        digitalWrite(LED_RED,   HIGH);
+        Serial.println("HIGH level");
       } else if (pulseCount >= MED_THRESHOLD) {
         allLedsOff();
         digitalWrite(LED_GREEN,  HIGH);
-        digitalWrite(LED_YELLOW, HIGH);       // MEDIUM detection
-        Serial.println("MEDIUM detection");
-      } else {
+        digitalWrite(LED_YELLOW, HIGH);
+        Serial.println("MEDIUM level");
+      } else if (pulseCount >= LOW_THRESHOLD) {
         allLedsOff();
         digitalWrite(LED_GREEN,    HIGH);
-        digitalWrite(LED_BLUE_LOW, HIGH);     // LOW detection
-        Serial.println("LOW detection");
+        digitalWrite(LED_BLUE_LOW, HIGH);
+        Serial.println("LOW level");
       }
     }
 
@@ -379,29 +374,39 @@ void loop() {
     }
   }
 
-  // ── Send Alert at HIGH threshold ────────────────────────────────────────
-  bool alertReady = (pulseCount >= HIGH_THRESHOLD)
-                 && (now - lastAlertTime    >= COOLDOWN_MS)
-                 && (now - pulseWindowStart >= DEBOUNCE_MS);
+  // ── Escalating alerts: fire immediately each time a new level is crossed ─
+  int currentLevel = 0;
+  if      (pulseCount >= HIGH_THRESHOLD) currentLevel = 3;
+  else if (pulseCount >= MED_THRESHOLD)  currentLevel = 2;
+  else if (pulseCount >= LOW_THRESHOLD)  currentLevel = 1;
 
-  if (alertReady) {
-    Serial.println("=== ALERT THRESHOLD REACHED ===");
+  // Escalations within the same window skip the cooldown;
+  // only the very first alert of a new burst checks cooldown.
+  bool cooldownOk = (lastSentLevel > 0) || (now - lastAlertTime >= COOLDOWN_MS);
+
+  if (currentLevel > lastSentLevel && cooldownOk) {
+    lastSentLevel = currentLevel;
     lastAlertTime = now;
-    int countToSend = pulseCount;
-    pulseCount = 0;
-
-    sendAlert(countToSend);
-
-    delay(2000);
-    setSafeState();
+    const char* label = (currentLevel == 3) ? "=== HIGH ALERT ===" :
+                        (currentLevel == 2) ? "=== MEDIUM ALERT ===" : "=== LOW ALERT ===";
+    Serial.println(label);
+    sendAlert(pulseCount);
+    delay(500);
   }
 
-  // ── Reset after pulse window expires ────────────────────────────────────
+  // ── Pulse window expiry: reset counter, restore safe LEDs ──────────────
   if (!vibrating && (now - pulseWindowStart > PULSE_WINDOW_MS) && pulseCount > 0) {
-    Serial.print("Window expired. Pulses this round: ");
+    Serial.print("Window expired. Pulses: ");
     Serial.println(pulseCount);
     pulseCount = 0;
-    setSafeState();
+    setSafeState();  // LEDs back to safe — lastSentLevel kept for escalation
+  }
+
+  // ── After full cooldown silence: reset escalation sequence ──────────────
+  if (lastSentLevel > 0 && !vibrating && pulseCount == 0
+      && (now - lastAlertTime >= COOLDOWN_MS)) {
+    Serial.println("Cooldown complete. Ready for new alert sequence.");
+    lastSentLevel = 0;
   }
 
   delay(5);

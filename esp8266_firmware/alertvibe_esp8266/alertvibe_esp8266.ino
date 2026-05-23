@@ -1,24 +1,6 @@
 /**
- * AlertVibe - ESP8266 Vibration Sensor Firmware
- * Hardware: ESP8266 NodeMCU + SW-40 Vibration Sensor + 5 LEDs
- *
- * Wiring:
- *   SW-40 VCC  → 3.3V
- *   SW-40 GND  → GND
- *   SW-40 DO   → D2  (GPIO4)
- *
- *   GREEN  LED → D1  (GPIO5)  — WiFi connected
- *   BLUE   LED → D0  (GPIO16) — Low detection
- *   YELLOW LED → D5  (GPIO14) — Medium detection
- *   RED    LED → D6  (GPIO12) — Hard / critical threat
- *   BLUE   LED → D7  (GPIO13) — Safe, device working
- *
- *   (Each LED anode → pin through 220Ω resistor, cathode → GND)
- *
- * Detection levels:
- *   2+  pulses → LOW    (BLUE D0 on)
- *   3+  pulses → MEDIUM (YELLOW on)
- *   5+  pulses → HARD   (RED on, alert sent)
+ * AlertVibe - Improved ESP8266 Vibration Sensor Firmware
+ * Improved Threshold + Debounce Version
  */
 
 #include <ESP8266WiFi.h>
@@ -26,380 +8,506 @@
 #include <WiFiClientSecureBearSSL.h>
 #include <EEPROM.h>
 
-// ─── CONFIGURE THESE ────────────────────────────────────────────────────────
+// ─── CONFIG ────────────────────────────────────────────────────────────────
 const char* DEFAULT_SSID     = "SIGIDAS";
 const char* DEFAULT_PASSWORD = "Lolipop123";
 
-// LOCAL backend (same WiFi as the ESP8266 — no sleep/timeout issues)
-// const char* BACKEND_URL      = "http://192.168.1.146:4000/api/alerts";
-// const char* WIFI_CONFIG_URL  = "http://192.168.1.146:4000/api/motorcycles/wifi/config";
-
-// PRODUCTION — Render cloud backend (HTTPS)
 const char* BACKEND_URL     = "https://alervibe-bckend.onrender.com/api/alerts";
 const char* WIFI_CONFIG_URL = "https://alervibe-bckend.onrender.com/api/motorcycles/wifi/config";
 
-const char* DEVICE_ID        = "motorcycle-02";
-const char* LOCATION         = "Motorcycle";
-// ────────────────────────────────────────────────────────────────────────────
+const char* DEVICE_ID = "motorcycle-02";
+const char* LOCATION  = "Motorcycle";
 
-// Dynamic WiFi credentials (loaded from EEPROM or defaults)
-char currentSsid[64];
-char currentPassword[64];
-
-// EEPROM layout — magic byte at 0 guards against stale/corrupt reads
+// ─── EEPROM ────────────────────────────────────────────────────────────────
 #define EEPROM_MAGIC  0xAB
 #define EEPROM_SIZE   129
 #define MAGIC_OFFSET    0
 #define SSID_OFFSET     1
 #define PASS_OFFSET    65
 
-// Pin assignments (NodeMCU GPIO numbers)
-#define VIBRATION_PIN   4    // D2  — SW-40 data output (active LOW)
+char currentSsid[64];
+char currentPassword[64];
 
-#define LED_GREEN       5    // D1  — WiFi connected
-#define LED_BLUE_LOW   16    // D0  — Low detection
-#define LED_YELLOW     14    // D5  — Medium detection
-#define LED_RED        12    // D6  — Hard / critical threat
-#define LED_BLUE_SAFE  13    // D7  — Safe / device working
+// ─── PINS ──────────────────────────────────────────────────────────────────
+#define VIBRATION_PIN   4    // D2
 
-// Detection thresholds (pulse count)
-#define LOW_THRESHOLD   1    // 1+  pulses  → low
-#define MED_THRESHOLD   2    // 2+  pulses  → medium
-#define HIGH_THRESHOLD  3    // 3+  pulses  → alert (lowered for testing; set to 5 for production)
+#define LED_GREEN       5    // D1
+#define LED_BLUE_LOW   16    // D0
+#define LED_YELLOW     14    // D5
+#define LED_RED        12    // D6
+#define LED_STATUS     13    // D7
 
-// Timing (milliseconds)
-#define DEBOUNCE_MS     20
-#define COOLDOWN_MS     5000
-#define WIFI_TIMEOUT    20000
-#define LED_HOLD_MS     100
-#define PULSE_WINDOW_MS 3000
+// ─── IMPROVED THRESHOLDS ──────────────────────────────────────────────────
+#define LOW_THRESHOLD      3
+#define MED_THRESHOLD      6
+#define HIGH_THRESHOLD     10
 
-// ─── State ───────────────────────────────────────────────────────────────────
-unsigned long lastAlertTime     = 0;
-unsigned long lastVibrationTime = 0;
-unsigned long pulseWindowStart  = 0;
-bool          vibrating         = false;
-int           pulseCount        = 0;
-int           sensorTriggerLevel = LOW;  // auto-detected in setup()
+#define DEBOUNCE_MS        80
+#define COOLDOWN_MS        5000
+#define WIFI_TIMEOUT       20000
+#define LED_HOLD_MS        100
+#define PULSE_WINDOW_MS    4000
 
-// ─── EEPROM Credential Helpers (replaces ESP32 NVS / Preferences) ────────────
+// ─── STATE ────────────────────────────────────────────────────────────────
+unsigned long lastAlertTime      = 0;
+unsigned long lastVibrationTime  = 0;
+unsigned long pulseWindowStart   = 0;
+unsigned long lastPulseDetected  = 0;
+
+bool vibrating = false;
+
+int pulseCount         = 0;
+int lastSentLevel      = 0;
+int sensorTriggerLevel = LOW;
+
+// ─── EEPROM FUNCTIONS ─────────────────────────────────────────────────────
 void loadCredentials() {
+
   EEPROM.begin(EEPROM_SIZE);
+
   uint8_t magic = EEPROM.read(MAGIC_OFFSET);
+
   char ssid[64] = {0};
   char pass[64] = {0};
+
   if (magic == EEPROM_MAGIC) {
-    for (int i = 0; i < 63; i++) ssid[i] = (char)EEPROM.read(SSID_OFFSET + i);
-    for (int i = 0; i < 63; i++) pass[i] = (char)EEPROM.read(PASS_OFFSET + i);
+
+    for (int i = 0; i < 63; i++) {
+      ssid[i] = (char)EEPROM.read(SSID_OFFSET + i);
+    }
+
+    for (int i = 0; i < 63; i++) {
+      pass[i] = (char)EEPROM.read(PASS_OFFSET + i);
+    }
   }
+
   EEPROM.end();
 
   if (magic == EEPROM_MAGIC && strlen(ssid) > 0) {
+
     strncpy(currentSsid, ssid, sizeof(currentSsid) - 1);
     strncpy(currentPassword, pass, sizeof(currentPassword) - 1);
-    Serial.println("Loaded WiFi from EEPROM: " + String(ssid));
+
+    Serial.println(F("Loaded WiFi from EEPROM"));
+
   } else {
+
     strncpy(currentSsid, DEFAULT_SSID, sizeof(currentSsid) - 1);
     strncpy(currentPassword, DEFAULT_PASSWORD, sizeof(currentPassword) - 1);
-    Serial.println("Using default WiFi credentials");
+
+    Serial.println(F("Using default WiFi"));
   }
 }
 
 void saveCredentials(const String& ssid, const String& pass) {
+
   EEPROM.begin(EEPROM_SIZE);
+
   EEPROM.write(MAGIC_OFFSET, EEPROM_MAGIC);
-  for (int i = 0; i < 64; i++)
-    EEPROM.write(SSID_OFFSET + i, i < (int)ssid.length() ? ssid[i] : 0);
-  for (int i = 0; i < 64; i++)
-    EEPROM.write(PASS_OFFSET + i, i < (int)pass.length() ? pass[i] : 0);
+
+  for (int i = 0; i < 64; i++) {
+    EEPROM.write(SSID_OFFSET + i,
+                 i < (int)ssid.length() ? ssid[i] : 0);
+  }
+
+  for (int i = 0; i < 64; i++) {
+    EEPROM.write(PASS_OFFSET + i,
+                 i < (int)pass.length() ? pass[i] : 0);
+  }
+
   EEPROM.commit();
   EEPROM.end();
-  Serial.println("WiFi credentials saved to EEPROM");
+
+  Serial.println(F("WiFi saved"));
 }
 
-// Simple JSON string extractor — returns value of a quoted key, or "" if null/missing
+// ─── JSON HELPER ───────────────────────────────────────────────────────────
 String extractJsonString(const String& json, const String& key) {
+
   String searchKey = "\"" + key + "\":\"";
+
   int start = json.indexOf(searchKey);
+
   if (start == -1) return "";
+
   start += searchKey.length();
+
   int end = json.indexOf("\"", start);
+
   if (end == -1) return "";
+
   return json.substring(start, end);
 }
 
-// Polls backend for WiFi config; saves and restarts if credentials changed
+// ─── CHECK WIFI UPDATE ────────────────────────────────────────────────────
 void checkWifiConfigUpdate() {
+
   if (WiFi.status() != WL_CONNECTED) return;
 
   BearSSL::WiFiClientSecure client;
-  client.setInsecure();  // skip cert validation — fine for internal config polling
+  client.setInsecure();
+
   HTTPClient http;
 
-  String url = String(WIFI_CONFIG_URL) + "?deviceId=" + String(DEVICE_ID);
+  String url = String(WIFI_CONFIG_URL) + "?deviceId=" + DEVICE_ID;
+
   http.begin(client, url);
-  http.setTimeout(30000);
 
   int code = http.GET();
+
   if (code == 200) {
+
     String body = http.getString();
+
     String newSsid = extractJsonString(body, "ssid");
     String newPass = extractJsonString(body, "password");
 
-    if (newSsid.length() > 0 && newSsid != String(currentSsid)) {
-      Serial.println("New WiFi config from backend: " + newSsid);
+    if (newSsid.length() > 0 &&
+        newSsid != String(currentSsid)) {
+
       saveCredentials(newSsid, newPass);
-      http.end();
-      delay(500);
-      Serial.println("Restarting to apply new WiFi config...");
-      delay(500);
+
+      delay(1000);
+
       ESP.restart();
     }
   }
+
   http.end();
 }
 
-// ─── LED Helpers ─────────────────────────────────────────────────────────────
+// ─── LED HELPERS ──────────────────────────────────────────────────────────
 void allLedsOff() {
-  digitalWrite(LED_GREEN,     LOW);
-  digitalWrite(LED_BLUE_LOW,  LOW);
-  digitalWrite(LED_YELLOW,    LOW);
-  digitalWrite(LED_RED,       LOW);
-  digitalWrite(LED_BLUE_SAFE, LOW);
+
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_BLUE_LOW, LOW);
+  digitalWrite(LED_YELLOW, LOW);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_STATUS, LOW);
 }
 
 void setSafeState() {
+
   allLedsOff();
-  digitalWrite(LED_GREEN,     HIGH);
-  digitalWrite(LED_BLUE_SAFE, HIGH);
+
+  digitalWrite(LED_GREEN, HIGH);
+  digitalWrite(LED_STATUS, HIGH);
 }
 
-// ─── WiFi ─────────────────────────────────────────────────────────────────────
-void connectWiFi() {
-  Serial.print("Connecting to WiFi: ");
-  Serial.println(currentSsid);
+// ─── WIFI ─────────────────────────────────────────────────────────────────
+bool connectWiFi() {
 
-  allLedsOff();
-  digitalWrite(LED_BLUE_SAFE, HIGH);   // Device is alive
+  Serial.print(F("Connecting to WiFi: "));
+  Serial.println(currentSsid);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(currentSsid, currentPassword);
 
   unsigned long start = millis();
+
   bool blink = false;
+
   while (WiFi.status() != WL_CONNECTED) {
+
+    yield();
+
     if (millis() - start > WIFI_TIMEOUT) {
-      Serial.println("\nWiFi timeout — restarting");
-      allLedsOff();
-      delay(1500);
-      ESP.restart();
+
+      Serial.println(F("WiFi timeout"));
+
+      return false;
     }
-    // Blink green while connecting
+
     blink = !blink;
-    digitalWrite(LED_GREEN, blink ? HIGH : LOW);
+
+    digitalWrite(LED_GREEN, blink);
+
     delay(500);
+
     Serial.print(".");
   }
 
   Serial.println();
-  Serial.print("Connected! IP: ");
-  Serial.println(WiFi.localIP());
+  Serial.println(F("WiFi Connected"));
 
   setSafeState();
-  delay(2000);
+
+  return true;
 }
 
-// ─── Alert ────────────────────────────────────────────────────────────────────
+// ─── SEND ALERT ───────────────────────────────────────────────────────────
 bool sendAlert(int count) {
+
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi lost — reconnecting");
-    connectWiFi();
+    if (!connectWiFi()) {
+      Serial.println(F("Alert skipped: WiFi unavailable"));
+      return false;
+    }
   }
 
+  BearSSL::WiFiClientSecure client;
+  client.setInsecure();
+
   HTTPClient http;
-  BearSSL::WiFiClientSecure secureClient;
-  secureClient.setInsecure();  // skip cert validation for Render HTTPS
-  http.begin(secureClient, BACKEND_URL);
-  http.setTimeout(30000);  // Render free tier can take up to 30s on cold start
+
+  http.begin(client, BACKEND_URL);
+
+  http.setTimeout(30000);
+
   http.addHeader("Content-Type", "application/json");
 
   const char* sev;
   const char* msg;
+
   if (count >= HIGH_THRESHOLD * 2) {
+
     sev = "critical";
     msg = "Extreme vibration detected. Motorcycle may be under attack!";
+
   } else if (count >= HIGH_THRESHOLD) {
+
     sev = "high";
     msg = "Strong vibration detected. Possible tampering in progress!";
-  } else {
+
+  } else if (count >= MED_THRESHOLD) {
+
     sev = "medium";
+    msg = "Moderate vibration detected. Check on your motorcycle.";
+
+  } else {
+
+    sev = "low";
     msg = "Low-level vibration detected. Stay alert.";
   }
 
-  String payload = "{\"deviceId\":\"";
-  payload += DEVICE_ID;
-  payload += "\",\"message\":\"";
-  payload += msg;
-  payload += "\",\"severity\":\"";
-  payload += sev;
-  payload += "\",\"meta\":{\"location\":\"";
-  payload += LOCATION;
-  payload += "\",\"pulseCount\":";
-  payload += count;
+  String payload = "{";
+  payload += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
+  payload += "\"message\":\"" + String(msg) + "\",";
+  payload += "\"severity\":\"" + String(sev) + "\",";
+  payload += "\"meta\":{";
+  payload += "\"location\":\"" + String(LOCATION) + "\",";
+  payload += "\"pulseCount\":" + String(count);
   payload += "}}";
 
-  Serial.print("POST → ");
+  Serial.println(F("Sending Alert:"));
   Serial.println(payload);
 
   int httpCode = http.POST(payload);
+
   bool success = (httpCode >= 200 && httpCode < 300);
 
   if (success) {
-    Serial.println("Alert sent!");
-    // Flash RED 3 times to confirm alert sent
+
+    Serial.println(F("Alert Sent"));
+
     for (int i = 0; i < 3; i++) {
-      digitalWrite(LED_RED, HIGH); delay(200);
-      digitalWrite(LED_RED, LOW);  delay(200);
+
+      digitalWrite(LED_RED, HIGH);
+      delay(200);
+
+      digitalWrite(LED_RED, LOW);
+      delay(200);
     }
+
   } else {
-    Serial.print("HTTP error: ");
+
+    Serial.print(F("HTTP Error: "));
     Serial.println(httpCode);
-    // Flash YELLOW to indicate send failure
+
     for (int i = 0; i < 3; i++) {
-      digitalWrite(LED_YELLOW, HIGH); delay(200);
-      digitalWrite(LED_YELLOW, LOW);  delay(200);
+
+      digitalWrite(LED_YELLOW, HIGH);
+      delay(200);
+
+      digitalWrite(LED_YELLOW, LOW);
+      delay(200);
     }
   }
 
   http.end();
+
   return success;
 }
 
-// ─── Setup ────────────────────────────────────────────────────────────────────
+// ─── SETUP ────────────────────────────────────────────────────────────────
 void setup() {
+
   Serial.begin(115200);
-  delay(100);
-  Serial.println("\n=== AlertVibe Sensor Starting ===");
 
-  pinMode(LED_GREEN,     OUTPUT);
-  pinMode(LED_BLUE_LOW,  OUTPUT);
-  pinMode(LED_YELLOW,    OUTPUT);
-  pinMode(LED_RED,       OUTPUT);
-  pinMode(LED_BLUE_SAFE, OUTPUT);
-  allLedsOff();
+  Serial.println(F("=== AlertVibe Starting ==="));
 
-  // Startup blink — all LEDs on briefly
-  digitalWrite(LED_GREEN,     HIGH);
-  digitalWrite(LED_BLUE_LOW,  HIGH);
-  digitalWrite(LED_YELLOW,    HIGH);
-  digitalWrite(LED_RED,       HIGH);
-  digitalWrite(LED_BLUE_SAFE, HIGH);
-  delay(800);
-  allLedsOff();
-  delay(200);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_BLUE_LOW, OUTPUT);
+  pinMode(LED_YELLOW, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_STATUS, OUTPUT);
 
   pinMode(VIBRATION_PIN, INPUT_PULLUP);
 
-  // Auto-detect sensor polarity: sample 30 readings to find idle state
+  allLedsOff();
+
+  // Startup animation
+  digitalWrite(LED_GREEN, HIGH);
+  digitalWrite(LED_BLUE_LOW, HIGH);
+  digitalWrite(LED_YELLOW, HIGH);
+  digitalWrite(LED_RED, HIGH);
+  digitalWrite(LED_STATUS, HIGH);
+
+  delay(1000);
+
+  allLedsOff();
+
+  // Detect sensor polarity
   int highCount = 0;
-  for (int i = 0; i < 30; i++) { if (digitalRead(VIBRATION_PIN) == HIGH) highCount++; delay(10); }
+
+  for (int i = 0; i < 30; i++) {
+
+    if (digitalRead(VIBRATION_PIN) == HIGH) {
+      highCount++;
+    }
+
+    delay(10);
+  }
+
   sensorTriggerLevel = (highCount > 15) ? LOW : HIGH;
-  Serial.println("Sensor idle: " + String(highCount > 15 ? "HIGH" : "LOW") + " → trigger on: " + String(sensorTriggerLevel == LOW ? "LOW" : "HIGH"));
 
   loadCredentials();
+
   connectWiFi();
-  checkWifiConfigUpdate();  // Apply any pending config change from dashboard
 
-  // Allow the first alert immediately — guard against unsigned underflow
-  unsigned long now_setup = millis();
-  lastAlertTime = (now_setup >= COOLDOWN_MS) ? now_setup - COOLDOWN_MS : 0;
-
-  Serial.println("Monitoring for vibration...");
-  Serial.print("LOW  threshold : "); Serial.print(LOW_THRESHOLD);  Serial.println(" pulses");
-  Serial.print("MED  threshold : "); Serial.print(MED_THRESHOLD);  Serial.println(" pulses");
-  Serial.print("HIGH threshold : "); Serial.print(HIGH_THRESHOLD); Serial.println(" pulses → Alert");
+  checkWifiConfigUpdate();
 
   setSafeState();
+
+  unsigned long setupNow = millis();
+  lastAlertTime = (setupNow >= COOLDOWN_MS) ? setupNow - COOLDOWN_MS : 0;
+
+  Serial.println(F("Monitoring vibration..."));
 }
 
-// ─── Main Loop ────────────────────────────────────────────────────────────────
+// ─── LOOP ─────────────────────────────────────────────────────────────────
 void loop() {
-  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == sensorTriggerLevel);
-  unsigned long now    = millis();
 
-  // ── Periodic WiFi reconnect (every 30s) ─────────────────────────────────
+  unsigned long now = millis();
+
+  bool sensorTriggered =
+      (digitalRead(VIBRATION_PIN) == sensorTriggerLevel);
+
+  // ─── WIFI CHECK ────────────────────────────────────────────────────────
   static unsigned long lastWifiCheck = 0;
+
   if (now - lastWifiCheck > 30000) {
+
     lastWifiCheck = now;
+
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.println("WiFi dropped — reconnecting");
+
+      Serial.println(F("WiFi Reconnecting"));
+
       connectWiFi();
     }
   }
 
-  // ── Count pulses ────────────────────────────────────────────────────────
-  if (sensorTriggered) {
+  // ─── IMPROVED DEBOUNCE DETECTION ──────────────────────────────────────
+  if (sensorTriggered &&
+      (now - lastPulseDetected > DEBOUNCE_MS)) {
+
+    lastPulseDetected = now;
+
     lastVibrationTime = now;
 
     if (!vibrating) {
+
       vibrating = true;
 
       if (now - pulseWindowStart > PULSE_WINDOW_MS) {
-        pulseCount       = 0;
+
+        pulseCount = 0;
         pulseWindowStart = now;
       }
 
       pulseCount++;
-      Serial.print("Pulse! Count: ");
+
+      Serial.print(F("Pulse Count: "));
       Serial.println(pulseCount);
 
-      // Update LEDs based on detection level
+      // ─── LED STATUS ───────────────────────────────────────────────────
       if (pulseCount >= HIGH_THRESHOLD) {
+
         allLedsOff();
+
         digitalWrite(LED_GREEN, HIGH);
-        digitalWrite(LED_RED,   HIGH);        // HARD — critical threat
-        Serial.println("!! HARD — Critical Threat !!");
+        digitalWrite(LED_RED, HIGH);
+
+        Serial.println(F("HIGH DETECTION"));
+
       } else if (pulseCount >= MED_THRESHOLD) {
+
         allLedsOff();
-        digitalWrite(LED_GREEN,  HIGH);
-        digitalWrite(LED_YELLOW, HIGH);       // MEDIUM detection
-        Serial.println("MEDIUM detection");
-      } else {
+
+        digitalWrite(LED_GREEN, HIGH);
+        digitalWrite(LED_YELLOW, HIGH);
+
+        Serial.println(F("MEDIUM DETECTION"));
+
+      } else if (pulseCount >= LOW_THRESHOLD) {
+
         allLedsOff();
-        digitalWrite(LED_GREEN,    HIGH);
-        digitalWrite(LED_BLUE_LOW, HIGH);     // LOW detection
-        Serial.println("LOW detection");
+
+        digitalWrite(LED_GREEN, HIGH);
+        digitalWrite(LED_BLUE_LOW, HIGH);
+
+        Serial.println(F("LOW DETECTION"));
       }
     }
-
-  } else {
-    if (vibrating && (now - lastVibrationTime >= LED_HOLD_MS)) {
-      vibrating = false;
-    }
   }
 
-  // ── Send Alert at HIGH threshold ────────────────────────────────────────
-  bool alertReady = (pulseCount >= HIGH_THRESHOLD)
-                 && (now - lastAlertTime    >= COOLDOWN_MS)
-                 && (now - pulseWindowStart >= DEBOUNCE_MS);
+  // ─── RESET VIBRATION STATE ────────────────────────────────────────────
+  if (!sensorTriggered &&
+      vibrating &&
+      (now - lastVibrationTime >= LED_HOLD_MS)) {
 
-  if (alertReady) {
-    Serial.println("=== ALERT THRESHOLD REACHED ===");
+    vibrating = false;
+  }
+
+  // ─── DETERMINE ALERT LEVEL ────────────────────────────────────────────
+  int currentLevel = 0;
+
+  if (pulseCount >= HIGH_THRESHOLD) {
+    currentLevel = 3;
+  }
+  else if (pulseCount >= MED_THRESHOLD) {
+    currentLevel = 2;
+  }
+  else if (pulseCount >= LOW_THRESHOLD) {
+    currentLevel = 1;
+  }
+
+  // ─── SEND ALERT ───────────────────────────────────────────────────────
+  bool cooldownOk =
+      (lastSentLevel > 0) ||
+      (now - lastAlertTime >= COOLDOWN_MS);
+
+  if (currentLevel > lastSentLevel && cooldownOk) {
+
+    lastSentLevel = currentLevel;
     lastAlertTime = now;
-    int countToSend = pulseCount;
-    pulseCount = 0;
 
-    sendAlert(countToSend);
-
-    delay(2000);
-    setSafeState();
+    sendAlert(pulseCount);
   }
 
-  // ── Reset after pulse window expires ────────────────────────────────────
-  if (!vibrating && (now - pulseWindowStart > PULSE_WINDOW_MS) && pulseCount > 0) {
-    Serial.print("Window expired. Pulses this round: ");
+  // ─── WINDOW EXPIRED ───────────────────────────────────────────────────
+  if (!vibrating &&
+      (now - pulseWindowStart > PULSE_WINDOW_MS) &&
+      pulseCount > 0) {
+
+    Serial.print(F("Window Expired. Final Pulses: "));
     Serial.println(pulseCount);
+
     pulseCount = 0;
+
+    lastSentLevel = 0;
+
     setSafeState();
   }
 
