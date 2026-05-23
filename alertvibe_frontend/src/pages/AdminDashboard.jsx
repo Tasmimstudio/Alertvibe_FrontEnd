@@ -623,12 +623,13 @@ function AdminDashboard() {
                           {/* 3-dot menu */}
                           <div className="relative">
                             <button
-                              onClick={() => setOpenMenuId(openMenuId === user.id + '_m' ? null : user.id + '_m')}
+                              onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === user.id + '_m' ? null : user.id + '_m'); }}
                               className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all text-lg font-bold"
                             >⋯</button>
                             {openMenuId === user.id + '_m' && (
                               <div className="absolute left-0 top-9 z-50 rounded-xl overflow-hidden shadow-2xl min-w-36"
-                                   style={{ background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                   style={{ background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.12)' }}
+                                   onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={() => { handleToggleStatus(user.id, user.active === false); setOpenMenuId(null); }}
                                   disabled={user.id === currentUser?.uid}
@@ -731,12 +732,13 @@ function AdminDashboard() {
                             <td className="text-center">
                               <div className="relative inline-block">
                                 <button
-                                  onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
+                                  onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === user.id ? null : user.id); }}
                                   className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all text-lg font-bold mx-auto"
                                 >⋯</button>
                                 {openMenuId === user.id && (
                                   <div className="absolute right-0 top-9 z-50 rounded-xl overflow-hidden shadow-2xl min-w-40"
-                                       style={{ background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                       style={{ background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.12)' }}
+                                       onClick={(e) => e.stopPropagation()}>
                                     <button
                                       onClick={() => { handleToggleStatus(user.id, user.active === false); setOpenMenuId(null); }}
                                       disabled={user.id === currentUser?.uid}
