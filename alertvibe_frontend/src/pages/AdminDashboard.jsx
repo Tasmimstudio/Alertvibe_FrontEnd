@@ -595,13 +595,9 @@ function AdminDashboard() {
                                   <p className="text-white text-xs font-semibold">{moto.plateNumber}</p>
                                   <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
                                 </div>
-                                <button
-                                  onClick={() => handleToggleMotorcycle(user.id, moto.id, moto.isActivated === false)}
-                                  className="px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0"
-                                  style={{ background: moto.isActivated !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
-                                >
-                                  {moto.isActivated !== false ? 'Deactivate' : 'Activate'}
-                                </button>
+                                <span className={`badge text-xs ${moto.isActivated !== false ? 'badge-green' : 'badge-red'}`}>
+                                  {moto.isActivated !== false ? 'Active' : 'Inactive'}
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -699,13 +695,9 @@ function AdminDashboard() {
                                         <p className="font-semibold text-white text-xs leading-tight">{moto.plateNumber}</p>
                                         <p className="text-white/40 text-xs">{moto.model || 'N/A'}</p>
                                       </div>
-                                      <button
-                                        onClick={() => handleToggleMotorcycle(user.id, moto.id, moto.isActivated === false)}
-                                        className="px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0 hover:opacity-80 transition-all"
-                                        style={{ background: moto.isActivated !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
-                                      >
-                                        {moto.isActivated !== false ? 'Deactivate' : 'Activate'}
-                                      </button>
+                                      <span className={`badge text-xs ${moto.isActivated !== false ? 'badge-green' : 'badge-red'}`}>
+                                        {moto.isActivated !== false ? 'Active' : 'Inactive'}
+                                      </span>
                                     </div>
                                   ))}
                                 </div>
