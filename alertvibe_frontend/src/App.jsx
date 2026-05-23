@@ -12,6 +12,7 @@ import SecurityAlertLog from './pages/SecurityAlertLog';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminSetup from './pages/AdminSetup';
 import Profile from './pages/Profile';
+import HowItWorks from './pages/HowItWorks';
 import Login from './pages/Login';
 import Registration from './pages/Registration';
 import { requestNotificationPermission } from './services/NotificationService';
@@ -84,6 +85,7 @@ function AppContent() {
         <Route path="/history" element={<ProtectedRoute><AlertHistory /></ProtectedRoute>} />
         <Route path="/devices" element={<ProtectedRoute><DeviceRegistration /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/how-it-works" element={<ProtectedRoute><HowItWorks /></ProtectedRoute>} />
 
         {/* Security routes */}
         <Route path="/security" element={<ProtectedRoute requiredRole={['security', 'admin']}><SecurityDashboard /></ProtectedRoute>} />

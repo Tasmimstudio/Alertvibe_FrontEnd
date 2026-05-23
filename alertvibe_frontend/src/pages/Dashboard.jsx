@@ -287,6 +287,7 @@ const Dashboard = () => {
     { key: 'home',   label: 'Home',       icon: <HomeIcon />,             onClick: () => navigate('/') },
     { key: 'bikes',  label: 'Motorcycles', icon: <BikeIcon />,             onClick: () => navigate('/devices') },
     { key: 'alerts', label: 'Alerts',      icon: <BellIcon />, badge: unreadCount, onClick: () => navigate('/history') },
+    { key: 'guide',  label: 'Guide',       icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, onClick: () => navigate('/how-it-works'), activeColor: '#60a5fa' },
     {
       key: 'logout', label: 'Logout',
       icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
