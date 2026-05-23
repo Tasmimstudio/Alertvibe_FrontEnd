@@ -58,9 +58,9 @@ Preferences prefs;
 #define LED_BLUE_SAFE   19   // GPIO19 — Safe / device working
 
 // Detection thresholds (pulse count within PULSE_WINDOW_MS)
-#define LOW_THRESHOLD   2    // 2–3  pulses → low    (1 shake)
-#define MED_THRESHOLD   4    // 4–5  pulses → medium (2 shakes within window)
-#define HIGH_THRESHOLD  6    // 6+   pulses → high   (3+ shakes within window)
+#define LOW_THRESHOLD   1    // 1–2  pulses → light    (gentle vibration)
+#define MED_THRESHOLD   3    // 3–5  pulses → moderate (noticeable shake)
+#define HIGH_THRESHOLD  6    // 6+   pulses → strong   (hard/repeated shake)
 
 // Timing (milliseconds)
 #define DEBOUNCE_MS     20
@@ -227,17 +227,14 @@ bool sendAlert(int count) {
 
   const char* sev;
   const char* msg;
-  if (count >= HIGH_THRESHOLD * 2) {
-    sev = "critical";
-    msg = "Extreme vibration detected. Motorcycle may be under attack!";
-  } else if (count >= HIGH_THRESHOLD) {
-    sev = "high";
+  if (count >= HIGH_THRESHOLD) {
+    sev = "strong";
     msg = "Strong vibration detected. Possible tampering in progress!";
   } else if (count >= MED_THRESHOLD) {
-    sev = "medium";
+    sev = "moderate";
     msg = "Moderate vibration detected. Check on your motorcycle.";
   } else {
-    sev = "low";
+    sev = "light";
     msg = "Low-level vibration detected. Stay alert.";
   }
 
