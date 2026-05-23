@@ -151,6 +151,7 @@ function AdminDashboard() {
   const [pwModal, setPwModal] = useState(null); // { userId, displayName }
   const [newPw, setNewPw] = useState('');
   const [savingPw, setSavingPw] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -162,6 +163,13 @@ function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'models') fetchModels();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = () => setOpenMenuId(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [openMenuId]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -612,25 +620,33 @@ function AdminDashboard() {
                             <option value="security" style={{ background: '#1e293b' }}>Security</option>
                             <option value="admin" style={{ background: '#1e293b' }}>Admin</option>
                           </select>
-                          <button
-                            onClick={() => handleToggleStatus(user.id, user.active === false)}
-                            disabled={user.id === currentUser?.uid}
-                            className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40"
-                            style={{ background: user.active !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
-                          >
-                            {user.active !== false ? 'Deactivate' : 'Activate'}
-                          </button>
-                          <button
-                            onClick={() => { setPwModal({ userId: user.id, displayName: user.displayName || user.email }); setNewPw(''); }}
-                            className="px-3 py-1 rounded-lg text-xs font-bold text-white"
-                            style={{ background: 'rgba(99,102,241,0.7)' }}
-                          >Pwd</button>
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            disabled={user.id === currentUser?.uid}
-                            className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40"
-                            style={{ background: 'rgba(239,68,68,0.7)' }}
-                          >Delete</button>
+                          {/* 3-dot menu */}
+                          <div className="relative">
+                            <button
+                              onClick={() => setOpenMenuId(openMenuId === user.id + '_m' ? null : user.id + '_m')}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all text-lg font-bold"
+                            >⋯</button>
+                            {openMenuId === user.id + '_m' && (
+                              <div className="absolute left-0 top-9 z-50 rounded-xl overflow-hidden shadow-2xl min-w-36"
+                                   style={{ background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                <button
+                                  onClick={() => { handleToggleStatus(user.id, user.active === false); setOpenMenuId(null); }}
+                                  disabled={user.id === currentUser?.uid}
+                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold disabled:opacity-40 hover:bg-white/10 transition-colors"
+                                  style={{ color: user.active !== false ? '#fbbf24' : '#4ade80' }}
+                                >{user.active !== false ? 'Deactivate' : 'Activate'}</button>
+                                <button
+                                  onClick={() => { setPwModal({ userId: user.id, displayName: user.displayName || user.email }); setNewPw(''); setOpenMenuId(null); }}
+                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-400 hover:bg-white/10 transition-colors"
+                                >Reset Password</button>
+                                <button
+                                  onClick={() => { handleDeleteUser(user.id); setOpenMenuId(null); }}
+                                  disabled={user.id === currentUser?.uid}
+                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-400 disabled:opacity-40 hover:bg-white/10 transition-colors"
+                                >Delete</button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -712,32 +728,32 @@ function AdminDashboard() {
                                 {user.active !== false ? 'Active' : 'Inactive'}
                               </span>
                             </td>
-                            <td>
-                              <div className="flex justify-center gap-1.5 flex-wrap">
+                            <td className="text-center">
+                              <div className="relative inline-block">
                                 <button
-                                  onClick={() => handleToggleStatus(user.id, user.active === false)}
-                                  disabled={user.id === currentUser?.uid}
-                                  className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40 hover:opacity-80 transition-all"
-                                  style={{ background: user.active !== false ? 'rgba(245,158,11,0.7)' : 'rgba(34,197,94,0.7)' }}
-                                >
-                                  {user.active !== false ? 'Deactivate' : 'Activate'}
-                                </button>
-                                <button
-                                  onClick={() => { setPwModal({ userId: user.id, displayName: user.displayName || user.email }); setNewPw(''); }}
-                                  className="px-3 py-1 rounded-lg text-xs font-bold text-white hover:opacity-80 transition-all"
-                                  style={{ background: 'rgba(99,102,241,0.7)' }}
-                                  title="Change password"
-                                >
-                                  Pwd
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  disabled={user.id === currentUser?.uid}
-                                  className="px-3 py-1 rounded-lg text-xs font-bold text-white disabled:opacity-40 hover:opacity-80 transition-all"
-                                  style={{ background: 'rgba(239,68,68,0.7)' }}
-                                >
-                                  Delete
-                                </button>
+                                  onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all text-lg font-bold mx-auto"
+                                >⋯</button>
+                                {openMenuId === user.id && (
+                                  <div className="absolute right-0 top-9 z-50 rounded-xl overflow-hidden shadow-2xl min-w-40"
+                                       style={{ background: 'rgba(15,15,25,0.98)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                    <button
+                                      onClick={() => { handleToggleStatus(user.id, user.active === false); setOpenMenuId(null); }}
+                                      disabled={user.id === currentUser?.uid}
+                                      className="w-full text-left px-4 py-2.5 text-xs font-semibold disabled:opacity-40 hover:bg-white/10 transition-colors"
+                                      style={{ color: user.active !== false ? '#fbbf24' : '#4ade80' }}
+                                    >{user.active !== false ? 'Deactivate' : 'Activate'}</button>
+                                    <button
+                                      onClick={() => { setPwModal({ userId: user.id, displayName: user.displayName || user.email }); setNewPw(''); setOpenMenuId(null); }}
+                                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-400 hover:bg-white/10 transition-colors"
+                                    >Reset Password</button>
+                                    <button
+                                      onClick={() => { handleDeleteUser(user.id); setOpenMenuId(null); }}
+                                      disabled={user.id === currentUser?.uid}
+                                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-400 disabled:opacity-40 hover:bg-white/10 transition-colors"
+                                    >Delete</button>
+                                  </div>
+                                )}
                               </div>
                             </td>
                           </tr>
