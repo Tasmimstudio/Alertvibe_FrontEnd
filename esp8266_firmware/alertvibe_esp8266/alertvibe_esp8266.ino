@@ -335,7 +335,7 @@ void setup() {
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_STATUS, OUTPUT);
 
-  pinMode(VIBRATION_PIN, INPUT_PULLUP);
+  pinMode(VIBRATION_PIN, INPUT);
 
   allLedsOff();
 
@@ -370,7 +370,7 @@ void setup() {
 // ─── LOOP ─────────────────────────────────────────────────────────────────
 void loop() {
 
-  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == LOW);
+  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == HIGH);
   unsigned long now    = millis();
 
   // ─── WIFI CHECK ────────────────────────────────────────────────────────
