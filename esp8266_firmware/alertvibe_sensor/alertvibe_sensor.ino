@@ -66,7 +66,7 @@ Preferences prefs;
 #define DEBOUNCE_MS     150
 #define COOLDOWN_MS     5000
 #define WIFI_TIMEOUT    20000
-#define LED_HOLD_MS     300
+#define LED_HOLD_MS     50
 #define PULSE_WINDOW_MS 15000
 
 // ─── State ───────────────────────────────────────────────────────────────────
