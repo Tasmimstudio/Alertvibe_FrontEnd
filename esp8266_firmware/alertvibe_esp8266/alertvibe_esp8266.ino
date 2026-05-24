@@ -337,7 +337,7 @@ void setup() {
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_STATUS, OUTPUT);
 
-  pinMode(VIBRATION_PIN, INPUT_PULLUP);
+  pinMode(VIBRATION_PIN, INPUT);
 
   allLedsOff();
 
