@@ -308,9 +308,9 @@ void setup() {
   allLedsOff();
   delay(200);
 
-  pinMode(VIBRATION_PIN, INPUT_PULLUP);
+  pinMode(VIBRATION_PIN, INPUT);  // No pullup — sensor connects to VCC when triggered
 
-  // Sample idle state — trigger fires on any deviation from this
+  // Sample idle state
   int highCount = 0;
   for (int i = 0; i < 30; i++) { if (digitalRead(VIBRATION_PIN) == HIGH) highCount++; delay(10); }
   idleLevel = (highCount > 15) ? HIGH : LOW;
