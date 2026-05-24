@@ -388,6 +388,18 @@ void loop() {
   bool sensorTriggered =
       (digitalRead(VIBRATION_PIN) == sensorTriggerLevel);
 
+  // ─── DEBUG: print raw pin state every 2s ──────────────────────────────
+  static unsigned long lastDebug = 0;
+  if (now - lastDebug > 2000) {
+    lastDebug = now;
+    Serial.print(F("PIN4 raw: "));
+    Serial.print(digitalRead(VIBRATION_PIN));
+    Serial.print(F("  triggerLevel: "));
+    Serial.print(sensorTriggerLevel);
+    Serial.print(F("  triggered: "));
+    Serial.println(sensorTriggered ? "YES" : "NO");
+  }
+
   // ─── WIFI CHECK ────────────────────────────────────────────────────────
   static unsigned long lastWifiCheck = 0;
 
