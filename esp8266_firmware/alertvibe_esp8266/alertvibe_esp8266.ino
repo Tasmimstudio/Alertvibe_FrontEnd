@@ -49,16 +49,14 @@ char currentPassword[64];
 #define PULSE_WINDOW_MS    15000
 
 // ─── STATE ────────────────────────────────────────────────────────────────
-unsigned long lastAlertTime      = 0;
-unsigned long lastVibrationTime  = 0;
-unsigned long pulseWindowStart   = 0;
-unsigned long lastPulseDetected  = 0;
+unsigned long lastAlertTime     = 0;
+unsigned long lastVibrationTime = 0;
+unsigned long pulseWindowStart  = 0;
 
 bool vibrating = false;
 
-int pulseCount         = 0;
-int lastSentLevel      = 0;
-int sensorTriggerLevel = LOW;
+int pulseCount    = 0;
+int lastSentLevel = 0;
 
 // ─── EEPROM FUNCTIONS ─────────────────────────────────────────────────────
 void loadCredentials() {
@@ -337,7 +335,7 @@ void setup() {
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_STATUS, OUTPUT);
 
-  pinMode(VIBRATION_PIN, INPUT);
+  pinMode(VIBRATION_PIN, INPUT_PULLUP);
 
   allLedsOff();
 
@@ -348,23 +346,9 @@ void setup() {
   digitalWrite(LED_RED, HIGH);
   digitalWrite(LED_STATUS, HIGH);
 
-  delay(1000);
-
+  delay(800);
   allLedsOff();
-
-  // Detect sensor polarity
-  int highCount = 0;
-
-  for (int i = 0; i < 30; i++) {
-
-    if (digitalRead(VIBRATION_PIN) == HIGH) {
-      highCount++;
-    }
-
-    delay(10);
-  }
-
-  sensorTriggerLevel = (highCount > 15) ? LOW : HIGH;
+  delay(200);
 
   loadCredentials();
 
@@ -378,145 +362,100 @@ void setup() {
   lastAlertTime = (setupNow >= COOLDOWN_MS) ? setupNow - COOLDOWN_MS : 0;
 
   Serial.println(F("Monitoring vibration..."));
+  Serial.print(F("LOW  threshold : ")); Serial.print(LOW_THRESHOLD);  Serial.println(F(" pulses"));
+  Serial.print(F("MED  threshold : ")); Serial.print(MED_THRESHOLD);  Serial.println(F(" pulses"));
+  Serial.print(F("HIGH threshold : ")); Serial.print(HIGH_THRESHOLD); Serial.println(F(" pulses"));
 }
 
 // ─── LOOP ─────────────────────────────────────────────────────────────────
 void loop() {
 
-  unsigned long now = millis();
-
-  bool sensorTriggered =
-      (digitalRead(VIBRATION_PIN) == sensorTriggerLevel);
-
-  // ─── DEBUG: print raw pin state every 2s ──────────────────────────────
-  static unsigned long lastDebug = 0;
-  if (now - lastDebug > 2000) {
-    lastDebug = now;
-    Serial.print(F("PIN4 raw: "));
-    Serial.print(digitalRead(VIBRATION_PIN));
-    Serial.print(F("  triggerLevel: "));
-    Serial.print(sensorTriggerLevel);
-    Serial.print(F("  triggered: "));
-    Serial.println(sensorTriggered ? "YES" : "NO");
-  }
+  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == LOW);
+  unsigned long now    = millis();
 
   // ─── WIFI CHECK ────────────────────────────────────────────────────────
   static unsigned long lastWifiCheck = 0;
-
   if (now - lastWifiCheck > 30000) {
-
     lastWifiCheck = now;
-
     if (WiFi.status() != WL_CONNECTED) {
-
       Serial.println(F("WiFi Reconnecting"));
-
       connectWiFi();
     }
   }
 
-  // ─── IMPROVED DEBOUNCE DETECTION ──────────────────────────────────────
-  if (sensorTriggered &&
-      (now - lastPulseDetected > DEBOUNCE_MS)) {
-
-    lastPulseDetected = now;
-
+  // ─── Count pulses ──────────────────────────────────────────────────────
+  if (sensorTriggered) {
     lastVibrationTime = now;
 
     if (!vibrating) {
-
       vibrating = true;
 
       if (now - pulseWindowStart > PULSE_WINDOW_MS) {
-
-        pulseCount = 0;
+        pulseCount       = 0;
         pulseWindowStart = now;
       }
 
       pulseCount++;
-
-      Serial.print(F("Pulse Count: "));
+      Serial.print(F("Pulse! Count: "));
       Serial.println(pulseCount);
 
-      // ─── LED STATUS ───────────────────────────────────────────────────
       if (pulseCount >= HIGH_THRESHOLD) {
-
         allLedsOff();
-
         digitalWrite(LED_GREEN, HIGH);
-        digitalWrite(LED_RED, HIGH);
-
-        Serial.println(F("HIGH DETECTION"));
-
+        digitalWrite(LED_RED,   HIGH);
+        Serial.println(F("HIGH level"));
       } else if (pulseCount >= MED_THRESHOLD) {
-
         allLedsOff();
-
-        digitalWrite(LED_GREEN, HIGH);
+        digitalWrite(LED_GREEN,  HIGH);
         digitalWrite(LED_YELLOW, HIGH);
-
-        Serial.println(F("MEDIUM DETECTION"));
-
+        Serial.println(F("MEDIUM level"));
       } else if (pulseCount >= LOW_THRESHOLD) {
-
         allLedsOff();
-
-        digitalWrite(LED_GREEN, HIGH);
+        digitalWrite(LED_GREEN,    HIGH);
         digitalWrite(LED_BLUE_LOW, HIGH);
-
-        Serial.println(F("LOW DETECTION"));
+        Serial.println(F("LOW level"));
       }
+    }
+
+  } else {
+    if (vibrating && (now - lastVibrationTime >= LED_HOLD_MS)) {
+      vibrating = false;
     }
   }
 
-  // ─── RESET VIBRATION STATE ────────────────────────────────────────────
-  if (!sensorTriggered &&
-      vibrating &&
-      (now - lastVibrationTime >= LED_HOLD_MS)) {
-
-    vibrating = false;
-  }
-
-  // ─── DETERMINE ALERT LEVEL ────────────────────────────────────────────
+  // ─── Escalating alerts ─────────────────────────────────────────────────
   int currentLevel = 0;
+  if      (pulseCount >= HIGH_THRESHOLD) currentLevel = 3;
+  else if (pulseCount >= MED_THRESHOLD)  currentLevel = 2;
+  else if (pulseCount >= LOW_THRESHOLD)  currentLevel = 1;
 
-  if (pulseCount >= HIGH_THRESHOLD) {
-    currentLevel = 3;
-  }
-  else if (pulseCount >= MED_THRESHOLD) {
-    currentLevel = 2;
-  }
-  else if (pulseCount >= LOW_THRESHOLD) {
-    currentLevel = 1;
-  }
-
-  // ─── SEND ALERT ───────────────────────────────────────────────────────
-  bool cooldownOk =
-      (lastSentLevel > 0) ||
-      (now - lastAlertTime >= COOLDOWN_MS);
+  bool cooldownOk = (lastSentLevel > 0) || (now - lastAlertTime >= COOLDOWN_MS);
 
   if (currentLevel > lastSentLevel && cooldownOk) {
-
     lastSentLevel = currentLevel;
     lastAlertTime = now;
-
+    const char* label = (currentLevel == 3) ? "=== HIGH ALERT ===" :
+                        (currentLevel == 2) ? "=== MEDIUM ALERT ===" : "=== LOW ALERT ===";
+    Serial.println(label);
     sendAlert(pulseCount);
+    delay(500);
   }
 
-  // ─── WINDOW EXPIRED ───────────────────────────────────────────────────
-  if (!vibrating &&
-      (now - pulseWindowStart > PULSE_WINDOW_MS) &&
-      pulseCount > 0) {
-
-    Serial.print(F("Window Expired. Final Pulses: "));
+  // ─── Pulse window expiry ───────────────────────────────────────────────
+  if (!vibrating && (now - pulseWindowStart > PULSE_WINDOW_MS) && pulseCount > 0) {
+    Serial.print(F("Window expired. Pulses: "));
     Serial.println(pulseCount);
-
     pulseCount = 0;
-
-    lastSentLevel = 0;
-
     setSafeState();
   }
 
+  // ─── Cooldown reset ────────────────────────────────────────────────────
+  if (lastSentLevel > 0 && !vibrating && pulseCount == 0
+      && (now - lastAlertTime >= COOLDOWN_MS)) {
+    Serial.println(F("Cooldown complete. Ready for new alert sequence."));
+    lastSentLevel = 0;
+  }
+
+  yield();
   delay(5);
 }
