@@ -75,6 +75,7 @@ unsigned long pulseWindowStart  = 0;
 bool          vibrating         = false;
 int           pulseCount        = 0;
 int           lastSentLevel     = 0;
+int           idleLevel         = HIGH;
 
 // ─── EEPROM CREDENTIAL HELPERS ────────────────────────────────────────────
 void loadCredentials() {
@@ -309,6 +310,12 @@ void setup() {
 
   pinMode(VIBRATION_PIN, INPUT_PULLUP);
 
+  // Sample idle state — trigger fires on any deviation from this
+  int highCount = 0;
+  for (int i = 0; i < 30; i++) { if (digitalRead(VIBRATION_PIN) == HIGH) highCount++; delay(10); }
+  idleLevel = (highCount > 15) ? HIGH : LOW;
+  Serial.print("Sensor idle: "); Serial.println(idleLevel == HIGH ? "HIGH → trigger on LOW" : "LOW → trigger on HIGH");
+
   loadCredentials();
   connectWiFi();
   checkWifiConfigUpdate();
@@ -327,14 +334,16 @@ void setup() {
 
 // ─── MAIN LOOP ────────────────────────────────────────────────────────────
 void loop() {
-  bool sensorTriggered = (digitalRead(VIBRATION_PIN) == LOW);
+  bool sensorTriggered = (digitalRead(VIBRATION_PIN) != idleLevel);
   unsigned long now    = millis();
 
   // ── Debug: raw pin state every 1s ───────────────────────────────────────
   static unsigned long lastDebug = 0;
   if (now - lastDebug > 1000) {
     lastDebug = now;
-    Serial.print("PIN raw: "); Serial.println(digitalRead(VIBRATION_PIN));
+    Serial.print("PIN raw: "); Serial.print(digitalRead(VIBRATION_PIN));
+    Serial.print("  idle: "); Serial.print(idleLevel);
+    Serial.print("  triggered: "); Serial.println(sensorTriggered ? "YES" : "NO");
   }
 
   // ── WiFi watchdog ────────────────────────────────────────────────────────
