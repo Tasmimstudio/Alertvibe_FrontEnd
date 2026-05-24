@@ -37,16 +37,16 @@ char currentPassword[64];
 #define LED_RED        12    // D6
 #define LED_STATUS     13    // D7
 
-// ─── IMPROVED THRESHOLDS ──────────────────────────────────────────────────
-#define LOW_THRESHOLD      3
-#define MED_THRESHOLD      6
-#define HIGH_THRESHOLD     10
+// ─── THRESHOLDS ───────────────────────────────────────────────────────────
+#define LOW_THRESHOLD      1
+#define MED_THRESHOLD      3
+#define HIGH_THRESHOLD     6
 
-#define DEBOUNCE_MS        80
+#define DEBOUNCE_MS        150
 #define COOLDOWN_MS        5000
 #define WIFI_TIMEOUT       20000
-#define LED_HOLD_MS        100
-#define PULSE_WINDOW_MS    4000
+#define LED_HOLD_MS        50
+#define PULSE_WINDOW_MS    15000
 
 // ─── STATE ────────────────────────────────────────────────────────────────
 unsigned long lastAlertTime      = 0;
@@ -259,24 +259,19 @@ bool sendAlert(int count) {
   const char* sev;
   const char* msg;
 
-  if (count >= HIGH_THRESHOLD * 2) {
+  if (count >= HIGH_THRESHOLD) {
 
-    sev = "critical";
-    msg = "Extreme vibration detected. Motorcycle may be under attack!";
-
-  } else if (count >= HIGH_THRESHOLD) {
-
-    sev = "high";
+    sev = "strong";
     msg = "Strong vibration detected. Possible tampering in progress!";
 
   } else if (count >= MED_THRESHOLD) {
 
-    sev = "medium";
+    sev = "moderate";
     msg = "Moderate vibration detected. Check on your motorcycle.";
 
   } else {
 
-    sev = "low";
+    sev = "light";
     msg = "Low-level vibration detected. Stay alert.";
   }
 
