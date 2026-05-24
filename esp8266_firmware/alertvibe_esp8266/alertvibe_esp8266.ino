@@ -330,6 +330,13 @@ void loop() {
   bool sensorTriggered = (digitalRead(VIBRATION_PIN) == LOW);
   unsigned long now    = millis();
 
+  // ── Debug: raw pin state every 1s ───────────────────────────────────────
+  static unsigned long lastDebug = 0;
+  if (now - lastDebug > 1000) {
+    lastDebug = now;
+    Serial.print("PIN raw: "); Serial.println(digitalRead(VIBRATION_PIN));
+  }
+
   // ── WiFi watchdog ────────────────────────────────────────────────────────
   static unsigned long lastWifiCheck = 0;
   if (now - lastWifiCheck > 30000) {
