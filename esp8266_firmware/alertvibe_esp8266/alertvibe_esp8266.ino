@@ -1,18 +1,17 @@
 /**
- * AlertVibe - ESP8266 Firmware (FIXED VERSION)
+ * AlertVibe - ESP8266 Vibration Sensor Firmware
  * Hardware: ESP8266 NodeMCU + SW-40 Vibration Sensor + 5 LEDs
  *
- * SENSOR WIRING:
- *   SW-40 VCC → 3.3V
- *   SW-40 GND → GND
- *   SW-40 DO  → D2
+ * Wiring:
+ *   SW-40 VCC  → 3.3V
+ *   SW-40 GND  → GND
+ *   SW-40 DO   → D5 (GPIO14)
  *
- * LED WIRING:
- *   D1 → GREEN  LED (WiFi)
- *   D0 → BLUE   LED (LOW)
- *   D5 → YELLOW LED (MEDIUM)
- *   D6 → RED    LED (HIGH)
- *   D7 → BLUE   LED (SAFE)
+ *   GREEN  LED → D1 — WiFi connected
+ *   BLUE   LED → D2 — Low detection
+ *   YELLOW LED → D6 — Medium detection
+ *   RED    LED → D7 — Hard / critical threat
+ *   SAFE   LED → D0 — Safe, device working
  */
 
 #include <ESP8266WiFi.h>
@@ -20,72 +19,54 @@
 #include <WiFiClientSecureBearSSL.h>
 #include <EEPROM.h>
 
-// ─────────────────────────────────────────────────────────────
-// WIFI + BACKEND CONFIG
-// ─────────────────────────────────────────────────────────────
-
+// ─── CONFIG ────────────────────────────────────────────────────────────────
 const char* DEFAULT_SSID     = "SIGIDAS";
 const char* DEFAULT_PASSWORD = "Lolipop123";
 
-// LOCAL BACKEND
-// const char* BACKEND_URL = "http://192.168.1.146:4000/api/alerts";
-
-// PRODUCTION BACKEND
 const char* BACKEND_URL =
   "https://alervibe-bckend.onrender.com/api/alerts";
 
 const char* DEVICE_ID = "motorcycle-02";
 const char* LOCATION  = "Motorcycle";
 
-// ─────────────────────────────────────────────────────────────
-// PIN DEFINITIONS
-// ─────────────────────────────────────────────────────────────
+// ─── PINS ──────────────────────────────────────────────────────────────────
+#define VIBRATION_PIN   D5
 
-#define VIBRATION_PIN D2
+#define LED_GREEN       D1
+#define LED_BLUE_LOW    D2
+#define LED_YELLOW      D6
+#define LED_RED         D7
+#define LED_SAFE        D0
 
-#define LED_GREEN     D1
-#define LED_BLUE_LOW  D0
-#define LED_YELLOW    D5
-#define LED_RED       D6
-#define LED_SAFE      D7
-
-// ─────────────────────────────────────────────────────────────
-// DETECTION THRESHOLDS
-// ─────────────────────────────────────────────────────────────
-
+// ─── THRESHOLDS ────────────────────────────────────────────────────────────
 #define LOW_THRESHOLD   1
-#define MED_THRESHOLD   2
-#define HIGH_THRESHOLD  3
+#define MED_THRESHOLD   3
+#define HIGH_THRESHOLD  6
 
-// ─────────────────────────────────────────────────────────────
-// TIMING
-// ─────────────────────────────────────────────────────────────
-
-#define DEBOUNCE_MS      20
+// ─── TIMING ────────────────────────────────────────────────────────────────
+#define DEBOUNCE_MS      150
 #define COOLDOWN_MS      5000
-#define PULSE_WINDOW_MS  3000
 #define WIFI_TIMEOUT     20000
 #define LED_HOLD_MS      50
+#define PULSE_WINDOW_MS  15000
 
-// ─────────────────────────────────────────────────────────────
-// STATE VARIABLES
-// ─────────────────────────────────────────────────────────────
-
+// ─── STATE ─────────────────────────────────────────────────────────────────
 unsigned long lastAlertTime     = 0;
 unsigned long lastVibrationTime = 0;
 unsigned long pulseWindowStart  = 0;
 
 bool vibrating = false;
 
-int pulseCount    = 0;
-int lastSentLevel = 0;
+int pulseCount         = 0;
+int lastSentLevel      = 0;
+int sensorTriggerLevel = LOW;
 
-// ─────────────────────────────────────────────────────────────
-// LED HELPERS
-// ─────────────────────────────────────────────────────────────
+// ─── WIFI CREDS ────────────────────────────────────────────────────────────
+char currentSsid[64];
+char currentPassword[64];
 
+// ─── LED HELPERS ───────────────────────────────────────────────────────────
 void allLedsOff() {
-
   digitalWrite(LED_GREEN, LOW);
   digitalWrite(LED_BLUE_LOW, LOW);
   digitalWrite(LED_YELLOW, LOW);
@@ -94,25 +75,23 @@ void allLedsOff() {
 }
 
 void setSafeState() {
-
   allLedsOff();
 
   digitalWrite(LED_GREEN, HIGH);
   digitalWrite(LED_SAFE, HIGH);
 }
 
-// ─────────────────────────────────────────────────────────────
-// WIFI CONNECTION
-// ─────────────────────────────────────────────────────────────
-
+// ─── WIFI ──────────────────────────────────────────────────────────────────
 void connectWiFi() {
-
   WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+
+  delay(200);
 
   Serial.print("Connecting to WiFi: ");
-  Serial.println(DEFAULT_SSID);
+  Serial.println(currentSsid);
 
-  WiFi.begin(DEFAULT_SSID, DEFAULT_PASSWORD);
+  WiFi.begin(currentSsid, currentPassword);
 
   unsigned long start = millis();
 
@@ -121,8 +100,7 @@ void connectWiFi() {
   while (WiFi.status() != WL_CONNECTED) {
 
     if (millis() - start > WIFI_TIMEOUT) {
-
-      Serial.println("\nWiFi Timeout. Restarting...");
+      Serial.println("\nWiFi timeout. Restarting...");
       ESP.restart();
     }
 
@@ -140,12 +118,11 @@ void connectWiFi() {
   Serial.println(WiFi.localIP());
 
   setSafeState();
+
+  delay(1000);
 }
 
-// ─────────────────────────────────────────────────────────────
-// SEND ALERT
-// ─────────────────────────────────────────────────────────────
-
+// ─── ALERT ─────────────────────────────────────────────────────────────────
 bool sendAlert(int count) {
 
   if (WiFi.status() != WL_CONNECTED) {
@@ -160,54 +137,44 @@ bool sendAlert(int count) {
   HTTPClient http;
 
   http.begin(*client, BACKEND_URL);
-
+  http.setTimeout(30000);
   http.addHeader("Content-Type", "application/json");
 
-  const char* severity;
-  const char* message;
+  const char* sev;
+  const char* msg;
 
   if (count >= HIGH_THRESHOLD) {
-
-    severity = "strong";
-    message  = "Strong vibration detected! Possible tampering.";
-
-  } else if (count >= MED_THRESHOLD) {
-
-    severity = "moderate";
-    message  = "Moderate vibration detected.";
-
-  } else {
-
-    severity = "light";
-    message  = "Low vibration detected.";
+    sev = "strong";
+    msg = "Strong vibration detected. Possible tampering!";
+  }
+  else if (count >= MED_THRESHOLD) {
+    sev = "moderate";
+    msg = "Moderate vibration detected.";
+  }
+  else {
+    sev = "light";
+    msg = "Low vibration detected.";
   }
 
   String payload = "{";
-
   payload += "\"deviceId\":\"";
   payload += DEVICE_ID;
   payload += "\",";
-
   payload += "\"message\":\"";
-  payload += message;
+  payload += msg;
   payload += "\",";
-
   payload += "\"severity\":\"";
-  payload += severity;
+  payload += sev;
   payload += "\",";
-
   payload += "\"meta\":{";
-
   payload += "\"location\":\"";
   payload += LOCATION;
   payload += "\",";
-
   payload += "\"pulseCount\":";
   payload += String(count);
-
   payload += "}}";
 
-  Serial.println("POST:");
+  Serial.println("POST →");
   Serial.println(payload);
 
   int httpCode = http.POST(payload);
@@ -216,13 +183,11 @@ bool sendAlert(int count) {
 
   if (success) {
 
-    Serial.println("Alert Sent!");
+    Serial.println("Alert sent!");
 
     for (int i = 0; i < 3; i++) {
-
       digitalWrite(LED_RED, HIGH);
       delay(200);
-
       digitalWrite(LED_RED, LOW);
       delay(200);
     }
@@ -233,10 +198,8 @@ bool sendAlert(int count) {
     Serial.println(httpCode);
 
     for (int i = 0; i < 3; i++) {
-
       digitalWrite(LED_YELLOW, HIGH);
       delay(200);
-
       digitalWrite(LED_YELLOW, LOW);
       delay(200);
     }
@@ -247,17 +210,14 @@ bool sendAlert(int count) {
   return success;
 }
 
-// ─────────────────────────────────────────────────────────────
-// SETUP
-// ─────────────────────────────────────────────────────────────
-
+// ─── SETUP ─────────────────────────────────────────────────────────────────
 void setup() {
 
   Serial.begin(115200);
 
   delay(100);
 
-  Serial.println("\n=== ALERTVIBE ESP8266 STARTING ===");
+  Serial.println("\n=== AlertVibe ESP8266 Starting ===");
 
   pinMode(LED_GREEN, OUTPUT);
   pinMode(LED_BLUE_LOW, OUTPUT);
@@ -267,7 +227,7 @@ void setup() {
 
   allLedsOff();
 
-  // Startup LED Test
+  // Startup LED test
   digitalWrite(LED_GREEN, HIGH);
   digitalWrite(LED_BLUE_LOW, HIGH);
   digitalWrite(LED_YELLOW, HIGH);
@@ -278,43 +238,72 @@ void setup() {
 
   allLedsOff();
 
-  // SW-40 SENSOR
   pinMode(VIBRATION_PIN, INPUT_PULLUP);
 
-  Serial.println("Sensor idle: HIGH");
-  Serial.println("Trigger on: LOW");
+  // Auto-detect polarity
+  int highCount = 0;
+
+  for (int i = 0; i < 30; i++) {
+
+    int reading = digitalRead(VIBRATION_PIN);
+
+    Serial.print("PIN raw: ");
+    Serial.println(reading);
+
+    if (reading == HIGH) {
+      highCount++;
+    }
+
+    delay(10);
+  }
+
+  sensorTriggerLevel = (highCount > 15) ? LOW : HIGH;
+
+  Serial.print("Sensor idle: ");
+  Serial.print((highCount > 15) ? "HIGH" : "LOW");
+  Serial.print(" → trigger on ");
+  Serial.println((sensorTriggerLevel == LOW) ? "LOW" : "HIGH");
+
+  strncpy(currentSsid, DEFAULT_SSID, sizeof(currentSsid) - 1);
+  strncpy(currentPassword, DEFAULT_PASSWORD, sizeof(currentPassword) - 1);
+
+  Serial.println("Using default WiFi credentials");
 
   connectWiFi();
 
-  lastAlertTime = millis() - COOLDOWN_MS;
+  unsigned long nowSetup = millis();
 
-  Serial.println("Monitoring vibration...");
+  lastAlertTime =
+    (nowSetup >= COOLDOWN_MS)
+    ? nowSetup - COOLDOWN_MS
+    : 0;
+
+  Serial.println("Monitoring for vibration...");
+
+  Serial.print("LOW  threshold : ");
+  Serial.print(LOW_THRESHOLD);
+  Serial.println(" pulses");
+
+  Serial.print("MED  threshold : ");
+  Serial.print(MED_THRESHOLD);
+  Serial.println(" pulses");
+
+  Serial.print("HIGH threshold : ");
+  Serial.print(HIGH_THRESHOLD);
+  Serial.println(" pulses → Alert");
+
+  setSafeState();
 }
 
-// ─────────────────────────────────────────────────────────────
-// MAIN LOOP
-// ─────────────────────────────────────────────────────────────
-
+// ─── LOOP ──────────────────────────────────────────────────────────────────
 void loop() {
 
-  int raw = digitalRead(VIBRATION_PIN);
-
-  bool sensorTriggered = (raw == LOW);
+  bool sensorTriggered =
+    (digitalRead(VIBRATION_PIN) == sensorTriggerLevel);
 
   unsigned long now = millis();
 
-  // DEBUG — print every 1s only
-  static unsigned long lastDebug = 0;
-  if (now - lastDebug >= 1000) {
-    lastDebug = now;
-    Serial.print("RAW: "); Serial.print(raw);
-    Serial.print("  Triggered: "); Serial.println(sensorTriggered ? "YES" : "NO");
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // DETECT VIBRATION PULSE
-  // ─────────────────────────────────────────────────────────
-
+  // ─── DETECT PULSE ─────────────────────────────────────────────────────
   if (sensorTriggered) {
 
     lastVibrationTime = now;
@@ -323,7 +312,6 @@ void loop() {
 
       vibrating = true;
 
-      // NEW WINDOW
       if (now - pulseWindowStart > PULSE_WINDOW_MS) {
 
         pulseCount = 0;
@@ -333,13 +321,10 @@ void loop() {
 
       pulseCount++;
 
-      Serial.print("Pulse Count: ");
+      Serial.print("Pulse! Count: ");
       Serial.println(pulseCount);
 
-      // ─────────────────────────────────────────────
-      // LED LEVELS
-      // ─────────────────────────────────────────────
-
+      // ─── LED STATES ────────────────────────────────────────────────
       if (pulseCount >= HIGH_THRESHOLD) {
 
         allLedsOff();
@@ -347,7 +332,7 @@ void loop() {
         digitalWrite(LED_GREEN, HIGH);
         digitalWrite(LED_RED, HIGH);
 
-        Serial.println("HIGH LEVEL");
+        Serial.println("HIGH level");
 
       } else if (pulseCount >= MED_THRESHOLD) {
 
@@ -356,16 +341,16 @@ void loop() {
         digitalWrite(LED_GREEN, HIGH);
         digitalWrite(LED_YELLOW, HIGH);
 
-        Serial.println("MEDIUM LEVEL");
+        Serial.println("MEDIUM level");
 
-      } else {
+      } else if (pulseCount >= LOW_THRESHOLD) {
 
         allLedsOff();
 
         digitalWrite(LED_GREEN, HIGH);
         digitalWrite(LED_BLUE_LOW, HIGH);
 
-        Serial.println("LOW LEVEL");
+        Serial.println("LOW level");
       }
     }
 
@@ -378,10 +363,7 @@ void loop() {
     }
   }
 
-  // ─────────────────────────────────────────────────────────
-  // ESCALATING ALERTS
-  // ─────────────────────────────────────────────────────────
-
+  // ─── ESCALATING ALERTS ────────────────────────────────────────────────
   int currentLevel = 0;
 
   if (pulseCount >= HIGH_THRESHOLD) {
@@ -394,26 +376,23 @@ void loop() {
     currentLevel = 1;
   }
 
-  bool cooldownOK =
+  bool cooldownOk =
     (lastSentLevel > 0) ||
     (now - lastAlertTime >= COOLDOWN_MS);
 
-  if (currentLevel > lastSentLevel && cooldownOK) {
+  if (currentLevel > lastSentLevel && cooldownOk) {
 
     lastSentLevel = currentLevel;
 
     lastAlertTime = now;
 
     if (currentLevel == 3) {
-
       Serial.println("=== HIGH ALERT ===");
-
-    } else if (currentLevel == 2) {
-
+    }
+    else if (currentLevel == 2) {
       Serial.println("=== MEDIUM ALERT ===");
-
-    } else {
-
+    }
+    else {
       Serial.println("=== LOW ALERT ===");
     }
 
@@ -422,15 +401,12 @@ void loop() {
     delay(500);
   }
 
-  // ─────────────────────────────────────────────────────────
-  // RESET WINDOW
-  // ─────────────────────────────────────────────────────────
-
+  // ─── WINDOW RESET ─────────────────────────────────────────────────────
   if (!vibrating &&
       (now - pulseWindowStart > PULSE_WINDOW_MS) &&
       pulseCount > 0) {
 
-    Serial.print("Window Expired. Pulses: ");
+    Serial.print("Window expired. Pulses: ");
     Serial.println(pulseCount);
 
     pulseCount = 0;
@@ -438,20 +414,17 @@ void loop() {
     setSafeState();
   }
 
-  // ─────────────────────────────────────────────────────────
-  // RESET ALERT STATE
-  // ─────────────────────────────────────────────────────────
-
+  // ─── RESET ESCALATION ─────────────────────────────────────────────────
   if (lastSentLevel > 0 &&
-      pulseCount == 0 &&
       !vibrating &&
+      pulseCount == 0 &&
       (now - lastAlertTime >= COOLDOWN_MS)) {
 
-    Serial.println("Cooldown complete.");
+    Serial.println("Cooldown complete. Ready again.");
 
     lastSentLevel = 0;
   }
 
   yield();
-  delay(10);
+  delay(5);
 }
