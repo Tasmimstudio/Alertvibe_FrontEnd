@@ -1,285 +1,103 @@
-# AlertVibe — UI User Manual
+# 4.3.1 User Interface Design
 
-A step-by-step guide on how to use the AlertVibe web application.
-
-**Live App:** https://alertvibefrontend-ochre.vercel.app
+The interface is crafted for simplicity, user-friendliness, and effective navigation. Motorcycle owners and security staff can utilize a web application that offers push notifications, monitoring records, and alert history for accessing the system. Users can enroll their motorcycles, monitor sensor activity, and receive push notifications activated by observed tampering or unauthorized movement. The interface features login verification to guarantee secure entry and limit access to unauthorized users. A dashboard showcases crucial details like registered motorcycles, sensor status, and alerts, allowing swift reactions to security threats.
 
 ---
 
-## Table of Contents
+## 4.3.1.1 Main Page
 
-1. [Getting Started](#1-getting-started)
-2. [Dashboard](#2-dashboard)
-3. [Alert History](#3-alert-history)
-4. [My Devices](#4-my-devices)
-5. [Profile](#5-profile)
-6. [How It Works](#6-how-it-works)
-7. [Security Dashboard](#7-security-dashboard-security--admin)
-8. [Security Alert Log](#8-security-alert-log-security--admin)
-9. [Admin Dashboard](#9-admin-dashboard-admin-only)
-10. [Push Notifications](#10-push-notifications)
-11. [User Roles](#11-user-roles)
+The Main Page serves as the primary interface for the Motorcycle Alert System with Push Notification (ALERTVIBE). It displays the ALERTVIBE emblem and the system name prominently at the top of the screen. Users can sign in by inputting their registered email address and password. A **Login** button is provided to authenticate and grant access to the system. A **"Forgot Password?"** link is also available to assist users who need to recover their credentials. New users are directed to create an account through the Registration page using the sign-up link. The page is designed with a dark-themed background that reflects the security-focused nature of the system.
+
+*Figure 4.5 Main Page of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
-## 1. Getting Started
+## 4.3.1.2 Registration Page
 
-### Register an Account
+The Registration Page enables users to set up an account and enroll their motorcycle in the system, guaranteeing that only approved users and authorized motorcycles are linked to the alert system. The registration procedure involves two phases: initially, users enter their personal information, including full name, email address, phone number, and password. Upon completing this step, they proceed to input their motorcycle information, including the plate number, model, color, and device code assigned to their sensor unit. A **Next** button directs users through the steps, while the **Register** button finalizes the process. After successful registration, the system automatically redirects the user to the login page to access their newly created account.
 
-1. Go to the app and click **Register**
-2. Fill in your name, email, and password
-3. Click **Create Account**
-4. You will be logged in automatically
+*Figure 4.6.1 Registration Page of Motorcycle Alert System with Push Notification (ALERTVIBE) 1 of 2*
 
-### Log In
-
-1. Enter your email and password
-2. Click **Login**
-3. You will be taken to the Dashboard
-
-### Log Out
-
-- **Desktop:** Click the **Log Out** button in the left sidebar
-- **Mobile:** Tap the **Logout** button in the bottom navigation bar
+*Figure 4.6.2 Registration Page of Motorcycle Alert System with Push Notification (ALERTVIBE) 2 of 2*
 
 ---
 
-## 2. Dashboard
+## 4.3.1.3 User Dashboard (Home)
 
-The Dashboard is the main screen of AlertVibe. It shows your motorcycle's live alert status.
+Upon successful login, the user is directed to the Dashboard, which serves as the central hub of the AlertVibe system. The dashboard displays the connection status, indicating whether the device is **Connected** or **Not Connected** to the backend server. It presents the latest alert previews organized under three tabs: **Last Alert**, which shows the most recent vibration alerts received within the last ten minutes; **Motorcycle Info**, which displays the registered motorcycle's details including plate number, model, and photo; and **WiFi Config**, which allows users to remotely update the sensor device's WiFi credentials without the need to reflash the firmware. Each alert card is color-coded according to severity: green for Light, yellow for Moderate, and red for Strong alerts. Users can navigate to manage motorcycles, view the full alert log, access the tutorial page, or log out from the sidebar on desktop or the bottom navigation bar on mobile devices.
 
-### Tabs
-
-| Tab | What it shows |
-|---|---|
-| **Last Alert** | The most recent alert(s) received in the last 10 minutes |
-| **Motorcycle Info** | Your registered motorcycle details and photo |
-| **WiFi Config** | Update the device's WiFi credentials remotely |
-
-### Alert Cards
-
-Each alert card shows:
-- **Severity badge** — LIGHT (green), MODERATE (yellow), or STRONG (red)
-- **Message** — description of the vibration detected
-- **Time** — how long ago the alert was received
-- **Pulse count** — number of vibration pulses detected
-
-### Connection Status
-
-A chip at the top shows whether the app is connected to the backend:
-- **Connected** (green) — live data is flowing
-- **Disconnected** (red) — backend may be sleeping (Render free tier)
-
-### WiFi Config Tab
-
-Use this to update your device's WiFi credentials without reflashing:
-1. Click the **WiFi Config** tab
-2. Enter the new SSID and password
-3. Click **Save**
-4. The device will pick up the new credentials on its next boot
+*Figure 4.6.3 User Dashboard of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
-## 3. Alert History
+## 4.3.1.4 Manage Motorcycles Page
 
-View the full log of all past alerts for your motorcycle.
+The Manage Motorcycles Page allows users to register and manage their motorcycle information within the AlertVibe system. Functions available on this page include registering a new motorcycle, editing existing motorcycle records, and deleting registered motorcycles. To register a motorcycle, users are required to provide the plate number, motorcycle model, device ID corresponding to the sensor unit, and an optional photo. Users can also activate or deactivate the monitoring system for each motorcycle using a toggle control. The status of each registered motorcycle is clearly indicated by a badge labeled **Active** (green) or **Inactive** (gray). This page ensures that the system only monitors authorized and registered motorcycles linked to the user's account.
 
-**How to access:**
-- **Desktop:** Click **Full Alert Log** in the left sidebar
-- **Mobile:** Tap the **Alerts** bell icon in the bottom nav
-
-### Features
-
-- Shows all alerts sorted by newest first
-- Each row shows: time, device, severity, message, pulse count
-- **Severity badges** are color-coded:
-  - 🟢 **LIGHT** — gentle vibration
-  - 🟡 **MODERATE** — noticeable shaking
-  - 🔴 **STRONG** — possible tampering
-- Tap any row to see full details
-- **Pagination** — navigate through pages of alerts
+*Figure 4.6.4 Manage Motorcycles Page of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
-## 4. My Devices
+## 4.3.1.5 Alert History Page
 
-Register and manage your motorcycles.
+The Alert History Page presents a comprehensive log of all vibration alerts that have been recorded for the user's registered motorcycle. Alerts are displayed in chronological order, with the most recent entries appearing first. Each alert entry contains the date and time of detection, the device ID, the severity level, the alert message, and the total pulse count recorded by the sensor. Severity levels are visually distinguished through color-coded badges: **LIGHT** (green) indicates minimal vibration such as wind or a passing vehicle; **MODERATE** (yellow) indicates noticeable shaking that may suggest tampering; and **STRONG** (red) indicates repeated and intense vibration consistent with a theft attempt. The page supports pagination to allow users to navigate through extensive alert records efficiently.
 
-**How to access:**
-- **Desktop:** Click **Manage Motorcycles** in the left sidebar
-- **Mobile:** Tap the **Motorcycles** icon in the bottom nav
-
-### Register a Motorcycle
-
-1. Click **Register New Motorcycle**
-2. Fill in:
-   - **Plate Number** — your motorcycle's license plate
-   - **Model** — make and model (e.g. Honda Click 125i)
-   - **Device ID** — the ID programmed into your sensor (e.g. `motorcycle-01`)
-   - **Photo** — optional photo of your motorcycle
-3. Click **Register**
-
-### Managing Your Motorcycle
-
-- **Edit** — update plate, model, or photo
-- **Activate / Deactivate** — toggle monitoring on or off
-- The status badge shows **Active** (green) or **Inactive** (gray)
+*Figure 4.6.5 Alert History Page of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
-## 5. Profile
+## 4.3.1.6 Profile Page
 
-View and update your personal information.
+The Profile Page enables users to view and update their personal account information. Users can modify their display name and upload a profile photo. A password reset option is also available, which sends a reset link to the user's registered email address. The profile page reflects the current role assigned to the user's account, such as User, Security, or Admin, providing a clear indication of the level of access granted within the system.
 
-**How to access:** Click your profile photo/avatar in the top-right corner
-
-### What You Can Update
-
-- Display name
-- Profile photo
-- Password (via reset email)
+*Figure 4.6.6 Profile Page of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
-## 6. How It Works
+## 4.3.1.7 How It Works Page
 
-A built-in tutorial explaining the AlertVibe system.
+The How It Works Page serves as an in-application tutorial and reference guide for users of the AlertVibe system. It explains the complete system flow from vibration detection at the sensor level to the delivery of push notifications to the user's browser. The page is organized into clearly defined sections covering: the step-by-step system flow, alert level descriptions and their corresponding color indicators, the LED indicator guide for the physical device, an overview of the hardware components, a testing guide outlining how many sensor taps are required to trigger each alert level, and a Frequently Asked Questions section addressing common concerns. This page is accessible from the desktop sidebar under the label **How It Works** and from the mobile bottom navigation under the **Guide** icon.
 
-**How to access:**
-- **Desktop:** Click **How It Works** in the left sidebar (above Log Out)
-- **Mobile:** Tap the **?** Guide button in the bottom nav
-
-### What It Covers
-
-- System flow (sensor → server → notification → dashboard)
-- Alert levels (Light / Moderate / Strong)
-- LED indicator guide
-- Hardware components
-- How to test the sensor
-- Frequently asked questions
+*Figure 4.6.7 How It Works Page of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
-## 7. Security Dashboard *(Security & Admin only)*
+## 4.3.1.8 Security Dashboard *(Security and Admin roles only)*
 
-A real-time dashboard for security personnel monitoring all registered motorcycles.
+The Security Dashboard is accessible exclusively to users assigned the Security or Admin role. It provides security personnel with a real-time monitoring interface covering all registered motorcycles and their associated alert activity across the entire system. The dashboard displays a live feed of incoming alerts, a summary of alert counts categorized by severity, and an overview of all registered motorcycles along with their current status. Security personnel can respond to alerts directly from this interface by marking them as handled, enabling efficient incident management and timely response to detected threats.
 
-**How to access:** Navigate to `/security` or use the Security link (visible to security and admin roles only)
-
-### Features
-
-- Live feed of all incoming alerts across all devices
-- Alert count by severity
-- Respond to alerts — mark them as handled
-- Overview of all registered motorcycles and their status
+*Figure 4.6.8 Security Dashboard of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
-## 8. Security Alert Log *(Security & Admin only)*
+## 4.3.1.9 Security Alert Log *(Security and Admin roles only)*
 
-Full alert history across all users and devices.
+The Security Alert Log provides security personnel with access to the complete alert history across all users and devices registered in the system. Alerts can be filtered by severity level, device ID, or date to assist in targeted monitoring and incident review. Each alert entry displays the severity badge, timestamp, device identifier, alert message, and response status. Security users can mark individual alerts as responded directly from the log. The page incorporates pagination to manage large volumes of alert data effectively.
 
-**How to access:** Navigate to `/security/alerts`
-
-### Features
-
-- Filter alerts by severity, device, or date
-- Mark alerts as responded
-- Color-coded severity badges
-- Pagination for large alert logs
+*Figure 4.6.9 Security Alert Log of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
-## 9. Admin Dashboard *(Admin only)*
+## 4.3.1.10 Admin Dashboard *(Admin role only)*
 
-Full system management panel.
+The Admin Dashboard is the highest-level management interface of the AlertVibe system, accessible only to users with the Admin role. It is organized into three primary tabs for comprehensive system oversight.
 
-**How to access:** Navigate to `/admin`
+The **Users Tab** displays a list of all registered user accounts, including their name, email address, assigned role, and account status. Administrators can manage each user account through a three-dot action menu that provides options to Deactivate or Activate the account, send a Password Reset email, or permanently Delete the user from the system.
 
-### Tabs
+The **Motorcycles Tab** presents all motorcycles registered across all user accounts, displaying the plate number, model, device ID, owner information, and current activation status. This allows administrators to oversee the full inventory of monitored vehicles within the system.
 
-#### Users Tab
-Manage all registered users:
-- View user name, email, role, and status
-- Click the **⋯** menu on any user to:
-  - **Deactivate / Activate** — block or restore access
-  - **Reset Password** — send a password reset email
-  - **Delete** — permanently remove the user
+The **Alerts Tab** provides system-wide access to all recorded alerts, with filtering options by severity and device. Administrators can mark alerts as responded and remove outdated records as needed.
 
-#### Motorcycles Tab
-View all motorcycles registered in the system:
-- See plate number, model, owner, device ID, and status
-- Monitor which devices are active
+A summary section at the top of the Admin Dashboard displays statistical overview cards showing the total number of users, registered motorcycles, and alerts, along with a breakdown of alerts by severity level.
 
-#### Alerts Tab
-View and manage all alerts system-wide:
-- Filter by severity or device
-- Mark alerts as responded
-- Delete old alerts
-
-### Stats Overview
-The top of the Admin Dashboard shows summary cards:
-- Total users
-- Total motorcycles
-- Total alerts
-- Alerts by severity
-
----
-
-## 10. Push Notifications
-
-AlertVibe sends browser push notifications when a vibration alert is detected.
-
-### Enable Notifications
-
-1. When you first log in, the browser will ask for notification permission
-2. Click **Allow**
-3. You will now receive alerts even when the app is in the background or closed
-
-### Notification Content
-
-Each push notification shows:
-- Alert severity (Light / Moderate / Strong)
-- Device ID
-- Short description of the vibration detected
-
-### If You Missed the Permission Prompt
-
-1. Click the **lock icon** in your browser's address bar
-2. Find **Notifications** and set it to **Allow**
-3. Refresh the page
-
----
-
-## 11. User Roles
-
-| Role | What They Can Access |
-|---|---|
-| **User** | Dashboard, own motorcycles, own alert history, profile |
-| **Security** | Everything a User can access + Security Dashboard + Security Alert Log |
-| **Admin** | Everything + Admin Dashboard (user management, all data) |
-
-Roles are assigned by an Admin. Contact your system administrator to request a role change.
+*Figure 4.6.10 Admin Dashboard of Motorcycle Alert System with Push Notification (ALERTVIBE)*
 
 ---
 
 ## Alert Severity Reference
 
-| Severity | Color | Meaning |
-|---|---|---|
-| **LIGHT** | 🟢 Green | 1–2 vibration pulses. Gentle touch, wind, or passing vehicle. |
-| **MODERATE** | 🟡 Yellow | 3–5 pulses. Noticeable shaking. Possible tampering. |
-| **STRONG** | 🔴 Red | 6+ pulses. Repeated strong vibration. Immediate action recommended. |
-
----
-
-## Tips
-
-- The backend is hosted on Render's free tier and may take **up to 30 seconds** to wake up after inactivity. If alerts are slow to appear, wait a moment and try again.
-- Make sure your browser **notifications are allowed** so you receive real-time push alerts.
-- Keep your motorcycle's **device ID** matching the `DEVICE_ID` programmed into the sensor firmware.
-- Use the **WiFi Config** tab on the Dashboard to update device WiFi remotely — no reflashing needed.
-
----
-
-*AlertVibe — Real-time Motorcycle Security System*
+| Severity | Color | Pulse Count | Description |
+|---|---|---|---|
+| **LIGHT** | Green | 1–2 pulses | Gentle vibration detected. May be caused by wind, a passing vehicle, or minor contact. |
+| **MODERATE** | Yellow | 3–5 pulses | Noticeable shaking detected. Possible tampering or unauthorized movement. |
+| **STRONG** | Red | 6+ pulses | Repeated strong vibration detected. Immediate attention is recommended. |
