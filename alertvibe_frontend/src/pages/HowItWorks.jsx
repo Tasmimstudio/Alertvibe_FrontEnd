@@ -80,7 +80,6 @@ const alertLevels = [
     border: 'rgba(74,222,128,0.3)',
     icon: '📳',
     desc: 'Gentle vibration detected — could be wind, a passing vehicle, or someone brushing against your bike.',
-    led: 'Blue LED lights up',
   },
   {
     level: 'MODERATE',
@@ -90,7 +89,6 @@ const alertLevels = [
     border: 'rgba(245,158,11,0.3)',
     icon: '⚠️',
     desc: 'Noticeable shaking — possible tampering. Someone may be attempting to move or break into your motorcycle.',
-    led: 'Yellow LED lights up',
   },
   {
     level: 'STRONG',
@@ -100,17 +98,9 @@ const alertLevels = [
     border: 'rgba(239,68,68,0.3)',
     icon: '🚨',
     desc: 'Repeated strong vibration — high likelihood of theft in progress. Immediate action required.',
-    led: 'Red LED lights up',
   },
 ];
 
-const ledInfo = [
-  { color: '#4ade80', name: 'Green', meaning: 'WiFi connected and device is online' },
-  { color: '#60a5fa', name: 'Blue (Safe)', meaning: 'Device is powered on and monitoring' },
-  { color: '#60a5fa', name: 'Blue (Alert)', meaning: 'Light vibration detected' },
-  { color: '#f59e0b', name: 'Yellow', meaning: 'Moderate vibration detected' },
-  { color: '#ef4444', name: 'Red', meaning: 'Strong vibration / alert sent' },
-];
 
 const faqs = [
   {
@@ -232,30 +222,6 @@ export default function HowItWorks() {
                   </div>
                 </div>
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.6 }}>{lvl.desc}</p>
-                <p className="mt-2 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Device indicator: {lvl.led}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* LED Guide */}
-        <section>
-          <h2 className="text-white font-bold text-base mb-4 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>LED Indicator Guide</h2>
-          <div className="av-card rounded-2xl overflow-hidden">
-            {ledInfo.map((led, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 px-4 py-3"
-                style={{ borderBottom: i < ledInfo.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}
-              >
-                <div
-                  className="flex-shrink-0 rounded-full"
-                  style={{ width: 12, height: 12, background: led.color, boxShadow: `0 0 8px ${led.color}` }}
-                />
-                <div>
-                  <p className="text-xs font-bold" style={{ color: led.color }}>{led.name} LED</p>
-                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>{led.meaning}</p>
-                </div>
               </div>
             ))}
           </div>
@@ -268,7 +234,7 @@ export default function HowItWorks() {
             {[
               { icon: '🧠', name: 'ESP32 Microcontroller', desc: 'The brain of the device. Runs the firmware, manages WiFi, counts vibration pulses, and sends alerts to the server.' },
               { icon: '📳', name: 'SW-420 Vibration Sensor', desc: 'A spring-based sensor that generates electrical pulses when vibrated. Detects even subtle movement from a distance.' },
-              { icon: '💡', name: '5 LED Indicators', desc: 'Green (WiFi), Blue Safe (power), Blue Alert (light), Yellow (moderate), Red (strong). Provide visual status at a glance.' },
+              { icon: '💡', name: '5 LED Indicators', desc: 'Visual indicators on the device that show the current status and alert level at a glance.' },
               { icon: '📶', name: 'WiFi (2.4GHz)', desc: 'The ESP32 connects to your local WiFi network to send alerts to the cloud server in real time.' },
             ].map((hw, i, arr) => (
               <div
@@ -294,9 +260,9 @@ export default function HowItWorks() {
             style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)' }}
           >
             {[
-              { label: 'Get a Light alert', action: 'Tap the device once gently', result: 'Blue LED on · Light alert sent' },
-              { label: 'Get a Moderate alert', action: 'Tap 3 times within 8 seconds', result: 'Yellow LED on · Moderate alert sent' },
-              { label: 'Get a Strong alert', action: 'Tap 6 times within 8 seconds', result: 'Red LED on · Strong alert sent' },
+              { label: 'Get a Light alert', action: 'Tap the device once gently', result: 'Light alert sent' },
+              { label: 'Get a Moderate alert', action: 'Tap 3 times within 8 seconds', result: 'Moderate alert sent' },
+              { label: 'Get a Strong alert', action: 'Tap 6 times within 8 seconds', result: 'Strong alert sent' },
             ].map((test, i) => (
               <div key={i} className="flex gap-3">
                 <div
