@@ -305,7 +305,7 @@ function Login() {
           <button
             onClick={() => navigate('/register')}
             className="w-full py-3 rounded-xl font-bold text-sm text-white tracking-wide transition-all hover:opacity-90 active:scale-[0.98]"
-            style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)' }}>
+            style={{ background: 'linear-gradient(135deg, #770959 0%, #cc239f 100%)' }}>
             Sign Up
           </button>
 
