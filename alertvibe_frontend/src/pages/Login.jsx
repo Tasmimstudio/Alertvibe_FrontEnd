@@ -81,7 +81,7 @@ function Login() {
 
       {/* ── LEFT — Branding ──────────────────────────────── */}
       <div className="hidden lg:flex w-[45%] flex-shrink-0 flex-col relative overflow-hidden"
-           style={{ background: 'linear-gradient(160deg, #3b2882 0%, #4a359a 60%, #3d2d8e 100%)' }}>
+           style={{ background: 'linear-gradient(160deg, #6E026F 0%, #8a0389 60%, #6E026F 100%)' }}>
 
         {/* Teal blob — top-left decorative (mimics 3D shell) */}
         <div className="absolute pointer-events-none" style={{
