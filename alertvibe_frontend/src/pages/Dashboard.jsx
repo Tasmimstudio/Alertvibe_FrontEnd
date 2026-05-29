@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { alertApi, motorcycleApi } from '../services/api';
@@ -6,6 +6,8 @@ import { onMessageListener } from '../services/NotificationService';
 import BottomNav from '../components/BottomNav';
 import ThemeSwitch from '../components/ThemeSwitch';
 import { formatDate } from '../utils/formatDate';
+import { db } from '../firebaseConfig';
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 const pendingMotorcycleKey = (uid) => `alertvibe:pendingMotorcycle:${uid}`;
 const readKey = (uid) => `alertvibe:read:${uid}`;
@@ -107,22 +109,13 @@ const Dashboard = () => {
   const [foregroundAlert, setForegroundAlert] = useState(null); // { title, body }
   const [tick, setTick] = useState(0); // increments every 30s to refresh activeGroup
 
-  useEffect(() => {
-  if (!currentUser?.uid) return;
+  const unsubscribeAlertsRef = useRef(null);
 
-  setupMessageListener();
-  fetchData();
-}, [currentUser]);
-
-  // Poll connection every 30 s
   useEffect(() => {
-    if (!currentUser) return;
-    const id = setInterval(() => {
-      motorcycleApi.list({ ownerId: currentUser.uid })
-        .then(() => setConnStatus('connected'))
-        .catch(() => setConnStatus('disconnected'));
-    }, 30000);
-    return () => clearInterval(id);
+    if (!currentUser?.uid) return;
+    setupMessageListener();
+    fetchMotorcycles();
+    return () => { if (unsubscribeAlertsRef.current) unsubscribeAlertsRef.current(); };
   }, [currentUser]);
 
   // Tick every 30 s so the active-alert countdown re-evaluates
@@ -131,87 +124,95 @@ const Dashboard = () => {
     return () => clearInterval(id);
   }, []);
 
-  // Recursive listener — re-subscribes after every message so no notifications are missed
+  // FCM foreground listener — just shows the banner; Firestore listener handles the data
   const setupMessageListener = () => {
     onMessageListener()
       .then((payload) => {
-        const nowMs = Date.now();
-        const newAlert = {
-          id: nowMs,
-          date: formatDate(new Date(), 'date'),
-          message: payload.notification?.body || 'New alert received',
-          severity: payload.data?.severity || 'medium',
-          isRead: false,
-          timestampMs: nowMs,
-        };
-        setAlerts(prev => [newAlert, ...prev]);
-
-        // Show visible in-app banner
         setForegroundAlert({
           title: payload.notification?.title || 'AlertVibe Alert',
           body:  payload.notification?.body  || 'Vibration detected on your motorcycle!',
         });
         setTimeout(() => setForegroundAlert(null), 8000);
-
         setupMessageListener();
       })
-      .catch(() => {
-        setupMessageListener();
-      });
+      .catch(() => { setupMessageListener(); });
   };
 
-  const fetchData = async () => {
+  const setupAlertListener = (deviceCodes) => {
+    if (unsubscribeAlertsRef.current) unsubscribeAlertsRef.current();
+    const readIds = getReadIds(currentUser?.uid);
+    const q = query(
+      collection(db, 'alerts'),
+      where('deviceId', 'in', deviceCodes),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const formattedAlerts = snapshot.docs.map(doc => {
+        const alert = { id: doc.id, ...doc.data() };
+        const ts = alert.timestamp;
+        const timestampMs = ts?.seconds ? ts.seconds * 1000
+          : ts ? new Date(ts).getTime() : 0;
+        return {
+          id: alert.id,
+          date: formatDate(ts?.toDate?.() || ts, 'date'),
+          message: alert.message || 'Vibration detected',
+          deviceId: alert.deviceId,
+          severity: alert.severity,
+          isRead: alert.responded || readIds.has(alert.id),
+          isResponded: alert.responded || false,
+          respondedBy: alert.respondedBy || null,
+          notes: alert.notes || '',
+          timestampMs,
+        };
+      });
+      setAlerts(formattedAlerts);
+      setConnStatus('connected');
+      setLoading(false);
+    }, () => {
+      setConnStatus('disconnected');
+      setLoading(false);
+    });
+    unsubscribeAlertsRef.current = unsubscribe;
+  };
+
+  const fetchMotorcycles = async () => {
     setLoading(true);
     try {
-      const alertsData = await alertApi.listAlerts();
-      const readIds = getReadIds(currentUser?.uid);
-      const formattedAlerts = (Array.isArray(alertsData) ? alertsData : []).map(alert => ({
-        id: alert.id,
-        date: formatDate(alert.timestamp, 'date'),
-        message: alert.message || 'Vibration detected',
-        deviceId: alert.deviceId,
-        severity: alert.severity,
-        isRead: alert.responded || readIds.has(alert.id),
-        isResponded: alert.responded || false,
-        respondedBy: alert.respondedBy || null,
-        notes: alert.notes || '',
-        timestampMs: alert.timestamp?._seconds
-          ? alert.timestamp._seconds * 1000
-          : alert.timestamp ? new Date(alert.timestamp).getTime() : 0,
-      }));
-      setAlerts(formattedAlerts);
-
-      if (currentUser?.uid) {
-        const pendingMotorcycle = localStorage.getItem(pendingMotorcycleKey(currentUser.uid));
-        if (pendingMotorcycle) {
-          await motorcycleApi.register(JSON.parse(pendingMotorcycle));
-          localStorage.removeItem(pendingMotorcycleKey(currentUser.uid));
-        }
-
-        const motorcyclesData = await motorcycleApi.list({ ownerId: currentUser.uid });
-        const motoList = motorcyclesData.motorcycles || [];
-        setAllMotorcycles(motoList);
-        if (motoList.length > 0) {
-          const m = motoList[0];
-          setMotorcycleId(m.id);
-          setMotorcycleInfo({
-            plateNumber: m.plateNumber || 'N/A',
-            model: m.model || 'N/A',
-            color: m.color || 'N/A',
-            deviceCode: m.deviceCode || 'N/A',
-            department: m.department || null,
-            parkingLocation: m.parkingLocation || null,
-          });
-          if (m.wifiSsid) setWifiSsid(m.wifiSsid);
-        } else {
-          setMotorcycleId(null);
-          setMotorcycleInfo(null);
-        }
+      const pendingMotorcycle = localStorage.getItem(pendingMotorcycleKey(currentUser.uid));
+      if (pendingMotorcycle) {
+        await motorcycleApi.register(JSON.parse(pendingMotorcycle));
+        localStorage.removeItem(pendingMotorcycleKey(currentUser.uid));
+      }
+      const motorcyclesData = await motorcycleApi.list({ ownerId: currentUser.uid });
+      const motoList = motorcyclesData.motorcycles || [];
+      setAllMotorcycles(motoList);
+      if (motoList.length > 0) {
+        const m = motoList[0];
+        setMotorcycleId(m.id);
+        setMotorcycleInfo({
+          plateNumber: m.plateNumber || 'N/A',
+          model: m.model || 'N/A',
+          color: m.color || 'N/A',
+          deviceCode: m.deviceCode || 'N/A',
+          department: m.department || null,
+          parkingLocation: m.parkingLocation || null,
+        });
+        if (m.wifiSsid) setWifiSsid(m.wifiSsid);
+      } else {
+        setMotorcycleId(null);
+        setMotorcycleInfo(null);
+      }
+      const deviceCodes = motoList.map(m => m.deviceCode).filter(Boolean);
+      if (deviceCodes.length > 0) {
+        setupAlertListener(deviceCodes);
+      } else {
+        setAlerts([]);
+        setLoading(false);
       }
       setConnStatus('connected');
     } catch {
       setConnStatus('disconnected');
-    } finally {
       setLoading(false);
     }
   };
