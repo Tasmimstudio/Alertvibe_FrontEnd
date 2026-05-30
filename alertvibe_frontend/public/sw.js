@@ -1,5 +1,5 @@
 // AlertVibe Service Worker — offline shell caching
-const CACHE_NAME = 'alertvibe-v1';
+const CACHE_NAME = 'alertvibe-v2';
 
 // App shell resources to pre-cache on install
 const SHELL_URLS = [
