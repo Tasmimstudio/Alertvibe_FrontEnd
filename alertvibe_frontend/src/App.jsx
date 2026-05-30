@@ -26,7 +26,7 @@ function ProtectedRoute({ children, requiredRole }) {
       <div className="av-bg min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="av-logo" style={{ width: 56, height: 56, borderRadius: 16 }}>
-            <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
+            <img src="/alertvibe-logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
           </div>
           <div className="av-spinner" />
           <p className="text-white/40 text-sm font-medium tracking-wide">Loading AlertVibe…</p>

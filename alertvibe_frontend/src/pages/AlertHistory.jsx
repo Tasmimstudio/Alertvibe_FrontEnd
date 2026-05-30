@@ -31,7 +31,7 @@ const saveReadIds = (uid, ids) => {
 
 const Logo = () => (
   <div className="av-logo">
-    <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
+    <img src="/alertvibe-logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
   </div>
 );
 

@@ -144,7 +144,7 @@ function Registration() {
         <div className="flex items-center justify-between mb-7">
           <div className="flex items-center gap-3">
             <div className="av-logo" style={{ width: 64, height: 64, borderRadius: '50%' }}>
-              <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
+              <img src="/alertvibe-logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
             </div>
             <div>
               <p className="text-white font-bold text-base">AlertVibe™</p>

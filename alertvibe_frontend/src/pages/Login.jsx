@@ -127,7 +127,7 @@ function Login() {
           <div className="flex items-center gap-4 mb-5">
             <div style={{ width: 160, height: 160, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%)', padding: 4, flexShrink: 0 }}>
               <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#fff', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
+                <img src="/alertvibe-logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
               </div>
             </div>
             <div>
@@ -180,7 +180,7 @@ function Login() {
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2 mb-6">
             <div style={{ width: 34, height: 34, borderRadius: 9, overflow: 'hidden' }}>
-              <img src="/logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
+              <img src="/alertvibe-logo.png" alt="AlertVibe" className="w-full h-full object-contain" />
             </div>
             <span className="font-black text-gray-800">AlertVibe™</span>
           </div>
